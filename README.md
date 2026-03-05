@@ -44,8 +44,8 @@ npx karis chat
 
 Karis is an open-source marketing intelligence system built on 8 specialized skills:
 
-- **GEO Audit** - Measure your visibility in AI search engines (ChatGPT, Perplexity, Claude)
-- **Content Discovery** - Find content opportunities from Reddit, X, HN, LinkedIn discussions
+- **GEO Audit** - Measure your visibility in AI search engines (ChatGPT, Perplexity)
+- **Content Discovery** - Find content opportunities from Reddit and X community discussions
 - **Competitor Analysis** - Compare your AI search performance against competitors
 - **Topic Clusters** - Generate content architecture with pillar topics and subtopics
 - **Content Optimizer** - Optimize articles for AI search visibility
@@ -131,7 +131,7 @@ npx karis "analyze my brand's AI search visibility"
 
 **Platform Features:**
 - Strategic CMO with skill orchestration
-- Multi-model GEO audits (50+ prompts × 4 models)
+- Multi-model GEO audits (50+ prompts × 2 models)
 - Full Reddit + X data access
 - Historical trend tracking
 - Journey × Aspect matrix mapping
@@ -191,7 +191,7 @@ Runs GEO audits on competitors, identifies where they outperform you, and surfac
 
 Trigger: "what should I write about", "find content opportunities", "what's trending in [category]"
 
-Searches Reddit, X, HN, and LinkedIn for discussions in your category. Clusters by theme, classifies by Visibility Driver:
+Searches Reddit and X for discussions in your category. Clusters by theme, classifies by Visibility Driver:
 - 🔴 **trending_opportunity**: Rising demand, create fast
 - 🟢 **on_track**: You're covering it well
 - 🟡 **distribution_gap**: Content exists, needs promotion
@@ -354,7 +354,7 @@ The CLI connects to Karis Platform for professional marketing intelligence:
 
 | Feature | Skills (Open Source) | CLI via Platform |
 |---------|---------------------|------------------|
-| GEO Audit | Agent executes locally | 50+ prompts × 4 models |
+| GEO Audit | Agent executes locally | 50+ prompts × 2 models |
 | Community Data | Agent's web access | Full Reddit + X data |
 | Tracking | One-time analysis | Historical trends |
 | Analysis | Basic insights | Journey × Aspect matrix |

@@ -1,6 +1,6 @@
 ---
 name: content-opportunities
-description: Discover content opportunities from community signals (Reddit, X, HN, LinkedIn). Use this skill whenever the user wants to find content gaps, discover what their audience is talking about, identify trending topics in their category, understand community pain points, find content ideas, see what questions people are asking, or asks "what should I write about", "what content should I create", "what are people asking about [category]", "find content opportunities", "what's trending in [category]", or "what topics should I cover". This skill analyzes community discussions to surface high-value content opportunities.
+description: Discover content opportunities from community signals (Reddit, X). Use this skill whenever the user wants to find content gaps, discover what their audience is talking about, identify trending topics in their category, understand community pain points, find content ideas, see what questions people are asking, or asks "what should I write about", "what content should I create", "what are people asking about [category]", "find content opportunities", "what's trending in [category]", or "what topics should I cover". This skill analyzes community discussions to surface high-value content opportunities.
 metadata:
   version: 1.0.0
   author: karis-ai
@@ -8,7 +8,7 @@ metadata:
 
 # Content Opportunities
 
-You are a CMO discovering content opportunities from community signals. Your goal is to analyze discussions in Reddit, X (Twitter), Hacker News, LinkedIn, and other community platforms to identify topics where your brand should create content — either because there's rising demand (trending), existing content isn't reaching people (distribution gap), or perception doesn't match reality (perception gap).
+You are a CMO discovering content opportunities from community signals. Your goal is to analyze discussions in Reddit and X (Twitter) to identify topics where your brand should create content — either because there's rising demand (trending), existing content isn't reaching people (distribution gap), or perception doesn't match reality (perception gap).
 
 ## Context
 
@@ -39,20 +39,17 @@ Choose community platforms based on brand type:
 
 **B2B SaaS**:
 - Reddit (r/SaaS, r/startups, category-specific subreddits)
-- LinkedIn (industry groups, thought leader posts)
 - X/Twitter (industry hashtags, founder discussions)
 
 **B2C / DTC**:
 - Reddit (lifestyle subreddits, product recommendation threads)
 - X/Twitter (consumer trends, product reviews)
-- TikTok (trending topics, user-generated content)
 
 **Developer Tools**:
 - Reddit (r/programming, r/webdev, language-specific subreddits)
-- Hacker News (Show HN, Ask HN)
-- GitHub Discussions (issues, feature requests)
+- X/Twitter (developer discussions, project announcements)
 
-**Why source selection matters:** B2B buyers research on LinkedIn and Reddit; consumers discover on TikTok and X; developers discuss on HN and GitHub. Searching the wrong platforms wastes time and misses your audience.
+**Why source selection matters:** Reddit surfaces detailed discussions and pain points; X/Twitter captures real-time trends and sentiment. Using both provides a complete picture of community signals.
 
 ### Step 3: Search Community Platforms
 

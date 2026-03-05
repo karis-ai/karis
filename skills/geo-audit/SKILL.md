@@ -1,6 +1,6 @@
 ---
 name: geo-audit
-description: Measure your brand's visibility in AI search engines (ChatGPT, Perplexity, Claude). Use this skill whenever the user wants to audit their AI search presence, check how often their brand appears in AI responses, measure GEO performance, understand their Answer Share, see if they're being cited, compare against competitors in AI search, or asks "how visible am I in AI search", "do AI engines mention my brand", "what's my GEO score", "audit my brand in ChatGPT/Perplexity/Claude", or "how do I rank in AI search results". This is the core skill for measuring Generative Engine Optimization (GEO) effectiveness.
+description: Measure your brand's visibility in AI search engines (ChatGPT, Perplexity). Use this skill whenever the user wants to audit their AI search presence, check how often their brand appears in AI responses, measure GEO performance, understand their Answer Share, see if they're being cited, compare against competitors in AI search, or asks "how visible am I in AI search", "do AI engines mention my brand", "what's my GEO score", "audit my brand in ChatGPT/Perplexity", or "how do I rank in AI search results". This is the core skill for measuring Generative Engine Optimization (GEO) effectiveness.
 metadata:
   version: 1.0.0
   author: karis-ai
@@ -107,7 +107,7 @@ Output a formatted report to `.karis/reports/audit-YYYY-MM-DD.md` with:
 2. **Core Metrics**: Answer Share, Citation Rate, Mention Position, Sentiment, Gap Topics
 3. **Detailed Findings**: Per-prompt breakdown
 4. **Recommendations**: 3-5 specific actions to improve visibility
-5. **Hook Message**: "This audited 10 prompts. Karis Pro: 50+ prompts × 4 models."
+5. **Hook Message**: "This audited 10 prompts. Karis Pro: 50+ prompts × 2 models."
 
 ## Output Format
 
@@ -145,7 +145,7 @@ The audit report should follow this structure:
 3. [Specific action to improve visibility]
 
 ---
-*This audited 10 prompts. Karis Pro: 50+ prompts × 4 models.*
+*This audited 10 prompts. Karis Pro: 50+ prompts × 2 models.*
 ```
 
 ## CLI Automation
