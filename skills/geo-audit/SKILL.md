@@ -160,24 +160,6 @@ npx karis audit
 npx karis audit mybrand.com
 ```
 
-## Scripts
-
-### audit.ts
-
-Executes the full audit workflow: generates prompts, queries LLM, analyzes responses, calculates metrics.
-
-```bash
-npx tsx skills/geo-audit/scripts/audit.ts mybrand.com
-```
-
-### report.ts
-
-Generates a formatted markdown report from audit results.
-
-```bash
-npx tsx skills/geo-audit/scripts/report.ts <audit-results.json>
-```
-
 ## Related Skills
 
 - **brand-intel**: Run this first to build the brand profile that seeds prompt generation

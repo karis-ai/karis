@@ -20,7 +20,9 @@ npx skills add karis-ai/karis
 
 Then ask your agent: *"Audit my brand's AI search visibility"* — it knows how to execute.
 
-**How it works:** Skills teach your agent marketing workflows. Your agent handles the execution using Karis API.
+**How it works:** Skills teach your agent marketing workflows. Your agent executes using Karis CLI.
+
+**Requirements:** Karis API key (free tier at [karis.im](https://karis.im))
 
 ### Option 2: CLI Tool
 
@@ -88,7 +90,7 @@ Agent: [Uses geo-audit skill]
 
 **Works with:** Cursor, Claude Code, Codex, Windsurf, and any agent supporting skills
 
-**What you need:** Karis API key (free tier at [karis.im](https://karis.im))
+**Requirements:** Karis API key (free tier at [karis.im](https://karis.im))
 
 ---
 

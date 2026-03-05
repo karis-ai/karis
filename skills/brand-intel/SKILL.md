@@ -134,18 +134,6 @@ npx karis init
 npx karis init --domain acme.com
 ```
 
-## Scripts
-
-### build-profile.ts
-
-Auto-generate an initial brand profile from a domain:
-
-```bash
-npx tsx skills/brand-intel/scripts/build-profile.ts acme.com
-```
-
-This script fetches the website, extracts meta information, and uses an LLM to generate a structured brand profile.
-
 ## Related Skills
 
 - **geo-audit**: After building a brand profile, audit your AI search visibility
