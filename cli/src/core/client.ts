@@ -88,7 +88,7 @@ export class KarisClient {
   static async create(): Promise<KarisClient> {
     const config = await loadConfig();
     const apiKey = process.env.KARIS_API_KEY || config['api-key'] || '';
-    const apiUrl = process.env.KARIS_API_URL || 'https://api.karis.im';
+    const apiUrl = process.env.KARIS_API_URL || config['base-url'] || 'https://api.karis.im';
     return new KarisClient({ apiKey, apiUrl });
   }
 
