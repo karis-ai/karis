@@ -6,8 +6,16 @@ import { getConfigValue, setConfigValue } from '../utils/config.js';
 import { runBrandInit } from './brand/init.js';
 
 async function ask(rl: readline.Interface, question: string): Promise<string> {
-  const answer = (await rl.question(`  ${question}: `)).trim();
-  return answer;
+  try {
+    const answer = (await rl.question(`  ${question}: `)).trim();
+    return answer;
+  } catch (error) {
+    // If readline is closed, return empty string
+    if (error instanceof Error && error.message.includes('closed')) {
+      return '';
+    }
+    throw error;
+  }
 }
 
 export async function runSetup(): Promise<void> {
@@ -21,13 +29,48 @@ export async function runSetup(): Promise<void> {
 
   const rl = readline.createInterface({ input, output });
 
+  // Handle readline close event
+  let readlineClosed = false;
+  rl.on('close', () => {
+    readlineClosed = true;
+  });
+
   // Step 1: Check API key
   let apiKey = await getConfigValue('api-key');
 
   if (apiKey) {
     console.log(chalk.green('✓ API key already configured'));
     console.log();
+
+    if (readlineClosed) {
+      console.log();
+      console.log(chalk.bold.green('Setup complete! 🎉'));
+      console.log();
+      console.log(chalk.dim('Next steps:'));
+      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
+      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
+      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
+      console.log();
+      return;
+    }
+
     const change = await ask(rl, 'Use a different API key? (y/N)');
+
+    // Give time for close event to fire if stdin reached EOF
+    await new Promise(resolve => setImmediate(resolve));
+
+    if (readlineClosed) {
+      console.log();
+      console.log(chalk.bold.green('Setup complete! 🎉'));
+      console.log();
+      console.log(chalk.dim('Next steps:'));
+      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
+      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
+      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
+      console.log();
+      return;
+    }
+
     if (change.toLowerCase() === 'y') {
       apiKey = undefined;
     }
@@ -85,7 +128,36 @@ export async function runSetup(): Promise<void> {
   if (existingBrand) {
     console.log(chalk.green(`✓ Brand profile already exists: ${chalk.bold(existingBrand.name)}`));
     console.log();
+
+    if (readlineClosed) {
+      console.log();
+      console.log(chalk.bold.green('Setup complete! 🎉'));
+      console.log();
+      console.log(chalk.dim('Next steps:'));
+      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
+      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
+      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
+      console.log();
+      return;
+    }
+
     const recreate = await ask(rl, 'Create a new brand profile? (y/N)');
+
+    // Give time for close event to fire if stdin reached EOF
+    await new Promise(resolve => setImmediate(resolve));
+
+    if (readlineClosed) {
+      console.log();
+      console.log(chalk.bold.green('Setup complete! 🎉'));
+      console.log();
+      console.log(chalk.dim('Next steps:'));
+      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
+      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
+      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
+      console.log();
+      return;
+    }
+
     if (recreate.toLowerCase() !== 'y') {
       rl.close();
       console.log();

@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { KarisClient } from '../../core/client.js';
-import type { BrandProfile } from '../../core/client.js';
+import { KarisClient, BrandCustomizations } from '../../core/client.js';
 import { success } from '../../utils/output.js';
+import ora from 'ora';
 
 async function ask(rl: readline.Interface, question: string, current?: string): Promise<string> {
   const suffix = current ? chalk.dim(` (current: ${current})`) : '';
@@ -18,6 +18,19 @@ async function askList(rl: readline.Interface, question: string, current?: strin
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+async function askCompetitors(rl: readline.Interface, current?: Array<{ name: string; domain: string }>): Promise<Array<{ name: string; domain: string }>> {
+  const currentStr = current?.map(c => `${c.name}:${c.domain}`).join(', ');
+  console.log(chalk.dim('  Enter competitors (name:domain), comma-separated.'));
+  const raw = await ask(rl, 'Competitors', currentStr);
+  if (!raw) return current || [];
+  return raw.split(',').map((entry) => {
+    const parts = entry.trim().split(':');
+    const name = parts[0]?.trim() || '';
+    const domain = parts.slice(1).join(':').trim() || '';
+    return { name, domain };
+  }).filter((c) => c.name);
 }
 
 export async function runBrandEdit(field?: string): Promise<void> {
@@ -47,62 +60,72 @@ export async function runBrandEdit(field?: string): Promise<void> {
     const rl = readline.createInterface({ input, output });
 
     console.log();
-    console.log(chalk.bold(`Editing Brand Profile — ${profile.name}`));
+    console.log(chalk.bold(`Editing Brand Profile — ${profile.name || profile.domain}`));
+    console.log();
+    console.log(chalk.dim('  Note: Only customizable fields can be edited (category, industries, audience, etc.)'));
+    console.log(chalk.dim('  Brand assets (colors, logos, fonts) are fetched from Brandfetch.'));
     console.log();
 
-    let updated: Partial<BrandProfile> = {};
+    let customizations: BrandCustomizations = {};
 
     // Edit specific field
     if (field) {
       switch (field) {
-        case 'name':
-          updated.name = await ask(rl, 'Brand name', profile.name);
-          break;
-        case 'domain':
-          updated.domain = await ask(rl, 'Domain', profile.domain);
-          break;
         case 'category':
-          updated.category = await ask(rl, 'Category', profile.category);
+          customizations.category = await ask(rl, 'Category', profile.category);
           break;
         case 'industries':
-          updated.industries = await askList(rl, 'Industries (comma-separated)', profile.industries);
+          customizations.industries = await askList(rl, 'Industries (comma-separated)', profile.industries);
           break;
         case 'audience':
         case 'audience.primary':
-          updated.audience = { ...profile.audience, primary: await ask(rl, 'Primary audience', profile.audience.primary) };
+          customizations.audience = {
+            primary: await ask(rl, 'Primary audience', profile.audience?.primary),
+            secondary: profile.audience?.secondary
+          };
           break;
         case 'audience.secondary':
-          updated.audience = { ...profile.audience, secondary: await ask(rl, 'Secondary audience', profile.audience.secondary) };
+          customizations.audience = {
+            primary: profile.audience?.primary,
+            secondary: await ask(rl, 'Secondary audience', profile.audience?.secondary)
+          };
+          break;
+        case 'value_propositions':
+          const vpStr = profile.value_propositions?.join(', ');
+          customizations.value_propositions = await askList(rl, 'Value propositions (comma-separated)', profile.value_propositions);
+          break;
+        case 'competitors':
+          customizations.competitors = await askCompetitors(rl, profile.competitors);
           break;
         case 'keywords':
-          updated.keywords = await askList(rl, 'Keywords (comma-separated)', profile.keywords);
+          customizations.keywords = await askList(rl, 'Keywords (comma-separated)', profile.keywords);
           break;
         case 'channels':
-          updated.channels = await askList(rl, 'Channels (comma-separated)', profile.channels);
+          customizations.channels = await askList(rl, 'Channels (comma-separated)', profile.channels);
           break;
         case 'tone':
-          updated.tone = await ask(rl, 'Brand tone', profile.tone);
+          customizations.tone = await ask(rl, 'Brand tone', profile.tone);
           break;
         default:
           console.log(chalk.yellow(`Unknown field: ${field}`));
           console.log();
           console.log(chalk.dim('Available fields:'));
-          console.log(chalk.dim('  name, domain, category, industries, audience, keywords, channels, tone'));
+          console.log(chalk.dim('  category, industries, audience, value_propositions, competitors, keywords, channels, tone'));
           console.log();
           rl.close();
           return;
       }
     } else {
-      // Edit all fields
-      updated = {
-        name: await ask(rl, 'Brand name', profile.name),
-        domain: await ask(rl, 'Domain', profile.domain),
+      // Edit all customizable fields
+      customizations = {
         category: await ask(rl, 'Category', profile.category),
         industries: await askList(rl, 'Industries (comma-separated)', profile.industries),
         audience: {
-          primary: await ask(rl, 'Primary audience', profile.audience.primary),
-          secondary: await ask(rl, 'Secondary audience', profile.audience.secondary),
+          primary: await ask(rl, 'Primary audience', profile.audience?.primary),
+          secondary: await ask(rl, 'Secondary audience', profile.audience?.secondary),
         },
+        value_propositions: await askList(rl, 'Value propositions (comma-separated)', profile.value_propositions),
+        competitors: await askCompetitors(rl, profile.competitors),
         keywords: await askList(rl, 'Keywords (comma-separated)', profile.keywords),
         channels: await askList(rl, 'Channels (comma-separated)', profile.channels),
         tone: await ask(rl, 'Brand tone', profile.tone),
@@ -112,12 +135,13 @@ export async function runBrandEdit(field?: string): Promise<void> {
     rl.close();
 
     console.log();
-    console.log(chalk.dim('Updating brand profile on Karis Platform...'));
+    const spinner = ora('Updating brand customizations...').start();
 
-    await client.updateBrand(updated);
+    await client.updateBrand(customizations);
 
+    spinner.succeed('Brand profile updated.');
     console.log();
-    console.log(success('Brand profile updated.'));
+    console.log(success('Your customizations have been saved.'));
     console.log();
     console.log(chalk.dim(`  View: ${chalk.cyan('npx karis brand show')}`));
     console.log();

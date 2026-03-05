@@ -43,21 +43,128 @@ export interface APIKeyInfo {
   created_at: string;
 }
 
-export interface BrandProfile {
-  name: string;
-  domain: string;
-  category: string;
-  industries: string[];
-  audience: {
-    primary: string;
-    secondary: string;
+// Brand Assets API Types (based on actual API response)
+export interface BrandAssetsSelection {
+  brand_id: string;
+  canonical_domain: string;
+  display_name: string;
+  aliases: string[];
+  domains: string[];
+  is_selected: boolean;
+  binding_status: string;
+  binding_created_at: string;
+  has_customization: boolean;
+  public_updated_at: string;
+  last_ack_public_at: string | null;
+  has_public_update: boolean;
+  previous_available: boolean;
+  public_profile_hash: string;
+  public_clusters_hash: string;
+  brand_profile: {
+    profile: {
+      name: string;
+      tagline?: string;
+      one_liner?: string;
+      categories?: string[];
+      brand_aliases?: string[];
+      core_offerings?: string[];
+      core_value_props?: string[];
+      primary_audiences?: string[];
+      positioning_angles?: string[];
+      primary_brand_jobs?: string[];
+      inferred_industries?: string[];
+      personas?: string[];
+      linkage?: any;
+      competitive_landscape?: {
+        summary?: string;
+        segments?: any[];
+        direct_competitor?: Array<{
+          name: string;
+          domain: string;
+          confidence: string;
+        }>;
+      };
+    };
+    data_sources?: string[];
+    model?: string;
   };
-  value_propositions: string[];
-  competitors: Array<{ name: string; domain: string }>;
-  keywords: string[];
-  channels: string[];
-  tone: string;
+  topic_clusters?: {
+    clusters?: any[];
+    data_sources?: string[];
+    model?: string;
+  };
+  brand_assets_kit_payload: any | null;
+  brand_assets_kit_sources: any | null;
+  brand_kit: any | null;
+  generation_status?: {
+    profile?: {
+      status: string;
+      started_at: string;
+      duration_ms: number;
+      model: string;
+      last_updated_by_user_email: string | null;
+      progress_percent: number;
+    };
+    clusters?: {
+      status: string;
+      started_at: string;
+      duration_ms: number;
+      model: string;
+      last_updated_by_user_email: string | null;
+      progress_percent: number;
+    };
+    overall_progress_percent?: number;
+    stage?: string;
+  };
 }
+
+// Simplified view for CLI display
+export interface BrandProfile {
+  id: string;
+  domain: string;
+  name: string;
+  description?: string;
+  longDescription?: string;
+  claimed?: boolean;
+  // From brand_profile.profile
+  tagline?: string;
+  one_liner?: string;
+  category?: string; // First category
+  categories?: string[];
+  industries?: string[];
+  audience?: {
+    primary?: string;
+    secondary?: string;
+  };
+  value_propositions?: string[];
+  competitors?: Array<{ name: string; domain: string }>;
+  keywords?: string[];
+  channels?: string[];
+  tone?: string;
+  // Brand assets (if available)
+  colors?: any[];
+  logos?: any[];
+  fonts?: any[];
+  links?: any[];
+}
+
+export interface BrandCustomizations {
+  category?: string;
+  categories?: string[];
+  industries?: string[];
+  audience?: {
+    primary?: string;
+    secondary?: string;
+  };
+  value_propositions?: string[];
+  competitors?: Array<{ name: string; domain: string }>;
+  keywords?: string[];
+  channels?: string[];
+  tone?: string;
+}
+
+// Legacy type for backward compatibility
+export type BrandAssetsSnapshot = BrandProfile;
 
 export class KarisApiError extends Error {
   constructor(
@@ -205,10 +312,10 @@ export class KarisClient {
     }
   }
 
-  // --- Brand API ---
+  // --- Brand Assets API ---
 
   async getBrand(): Promise<BrandProfile | null> {
-    const url = `${this.apiUrl}/api/v1/brand`;
+    const url = `${this.apiUrl}/api/v1/brand-assets/selection`;
     const response = await fetch(url, {
       method: 'GET',
       headers: { Authorization: `Bearer ${this.apiKey}` },
@@ -222,52 +329,178 @@ export class KarisClient {
       throw this.buildError(response.status, await this.extractMessage(response));
     }
 
-    const body = (await response.json()) as { data?: BrandProfile };
-    return body.data ?? null;
+    const body = (await response.json()) as { data?: BrandAssetsSelection };
+    if (!body.data) return null;
+
+    const data = body.data;
+    const profile = data.brand_profile?.profile;
+
+    // Transform API response to BrandProfile
+    return {
+      id: data.brand_id,
+      domain: data.canonical_domain,
+      name: data.display_name || profile?.name || data.canonical_domain,
+      description: profile?.one_liner,
+      longDescription: profile?.tagline,
+      claimed: data.binding_status === 'active',
+      tagline: profile?.tagline,
+      one_liner: profile?.one_liner,
+      category: profile?.categories?.[0],
+      categories: profile?.categories,
+      industries: profile?.inferred_industries,
+      audience: profile?.primary_audiences ? {
+        primary: profile.primary_audiences[0],
+        secondary: profile.primary_audiences[1],
+      } : undefined,
+      value_propositions: profile?.core_value_props,
+      competitors: profile?.competitive_landscape?.direct_competitor?.map(c => ({
+        name: c.name,
+        domain: c.domain,
+      })),
+      keywords: profile?.categories, // Using categories as keywords for now
+      channels: undefined, // Not in current API response
+      tone: undefined, // Not in current API response
+    };
   }
 
-  async createBrand(profile: BrandProfile): Promise<BrandProfile> {
-    const url = `${this.apiUrl}/api/v1/brand`;
+  async createBrand(domain: string): Promise<BrandProfile> {
+    const url = `${this.apiUrl}/api/v1/brand-assets/analyze`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify(profile),
+      body: JSON.stringify({ domain }),
     });
 
     if (!response.ok) {
       throw this.buildError(response.status, await this.extractMessage(response));
     }
 
-    const body = (await response.json()) as { data?: BrandProfile };
+    const body = (await response.json()) as { data?: BrandAssetsSelection };
     if (!body.data) {
       throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
     }
-    return body.data;
+
+    const data = body.data;
+    const profile = data.brand_profile?.profile;
+
+    return {
+      id: data.brand_id,
+      domain: data.canonical_domain,
+      name: data.display_name || profile?.name || data.canonical_domain,
+      description: profile?.one_liner,
+      longDescription: profile?.tagline,
+      claimed: data.binding_status === 'active',
+      tagline: profile?.tagline,
+      one_liner: profile?.one_liner,
+      category: profile?.categories?.[0],
+      categories: profile?.categories,
+      industries: profile?.inferred_industries,
+      audience: profile?.primary_audiences ? {
+        primary: profile.primary_audiences[0],
+        secondary: profile.primary_audiences[1],
+      } : undefined,
+      value_propositions: profile?.core_value_props,
+      competitors: profile?.competitive_landscape?.direct_competitor?.map(c => ({
+        name: c.name,
+        domain: c.domain,
+      })),
+      keywords: profile?.categories,
+      channels: undefined,
+      tone: undefined,
+    };
   }
 
-  async updateBrand(profile: Partial<BrandProfile>): Promise<BrandProfile> {
-    const url = `${this.apiUrl}/api/v1/brand`;
+  async updateBrand(customizations: BrandCustomizations): Promise<BrandProfile> {
+    // Get current brand to obtain brand_id
+    const currentBrand = await this.getBrand();
+    if (!currentBrand) {
+      throw new KarisApiError('No brand profile found', 'NO_BRAND', 404, EXIT_RUNTIME);
+    }
+
+    // Build override_profile by mapping CLI field names to API profile field names
+    const overrideProfile: Record<string, unknown> = {};
+
+    if (customizations.category !== undefined) {
+      overrideProfile['categories'] = [customizations.category];
+    }
+    if (customizations.categories !== undefined) {
+      overrideProfile['categories'] = customizations.categories;
+    }
+    if (customizations.industries !== undefined) {
+      overrideProfile['inferred_industries'] = customizations.industries;
+    }
+    if (customizations.audience !== undefined) {
+      const audiences: string[] = [];
+      if (customizations.audience.primary) audiences.push(customizations.audience.primary);
+      if (customizations.audience.secondary) audiences.push(customizations.audience.secondary);
+      if (audiences.length > 0) overrideProfile['primary_audiences'] = audiences;
+    }
+    if (customizations.value_propositions !== undefined) {
+      overrideProfile['core_value_props'] = customizations.value_propositions;
+    }
+    if (customizations.competitors !== undefined) {
+      overrideProfile['competitive_landscape'] = {
+        direct_competitor: customizations.competitors.map((c) => ({
+          name: c.name,
+          domain: c.domain,
+          confidence: 'high',
+        })),
+      };
+    }
+
+    const url = `${this.apiUrl}/api/v1/brand-assets/customizations`;
     const response = await fetch(url, {
-      method: 'PATCH',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey}`,
       },
-      body: JSON.stringify(profile),
+      body: JSON.stringify({
+        brand_id: currentBrand.id,
+        override_profile: overrideProfile,
+      }),
     });
 
     if (!response.ok) {
       throw this.buildError(response.status, await this.extractMessage(response));
     }
 
-    const body = (await response.json()) as { data?: BrandProfile };
+    const body = (await response.json()) as { data?: BrandAssetsSelection };
     if (!body.data) {
       throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
     }
-    return body.data;
+
+    const data = body.data;
+    const profile = data.brand_profile?.profile;
+
+    return {
+      id: data.brand_id,
+      domain: data.canonical_domain,
+      name: data.display_name || profile?.name || data.canonical_domain,
+      description: profile?.one_liner,
+      longDescription: profile?.tagline,
+      claimed: data.binding_status === 'active',
+      tagline: profile?.tagline,
+      one_liner: profile?.one_liner,
+      category: profile?.categories?.[0],
+      categories: profile?.categories,
+      industries: profile?.inferred_industries,
+      audience: profile?.primary_audiences ? {
+        primary: profile.primary_audiences[0],
+        secondary: profile.primary_audiences[1],
+      } : undefined,
+      value_propositions: profile?.core_value_props,
+      competitors: profile?.competitive_landscape?.direct_competitor?.map(c => ({
+        name: c.name,
+        domain: c.domain,
+      })),
+      keywords: profile?.categories,
+      channels: undefined,
+      tone: undefined,
+    };
   }
 
   // --- SSE parsing ---

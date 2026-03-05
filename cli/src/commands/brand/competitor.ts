@@ -48,7 +48,8 @@ export async function runCompetitorAdd(nameAndDomain: string): Promise<void> {
     }
 
     // Check if already exists
-    const exists = profile.competitors.some(c => c.name.toLowerCase() === name.toLowerCase());
+    const competitors = profile.competitors || [];
+    const exists = competitors.some(c => c.name.toLowerCase() === name.toLowerCase());
     if (exists) {
       console.log();
       console.log(warning(`Competitor "${name}" already exists.`));
@@ -57,7 +58,7 @@ export async function runCompetitorAdd(nameAndDomain: string): Promise<void> {
     }
 
     const newCompetitor = { name, domain };
-    const updatedCompetitors = [...profile.competitors, newCompetitor];
+    const updatedCompetitors = [...competitors, newCompetitor];
 
     await client.updateBrand({ competitors: updatedCompetitors });
 
@@ -97,22 +98,23 @@ export async function runCompetitorRemove(name: string): Promise<void> {
       return;
     }
 
-    const index = profile.competitors.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
+    const competitors = profile.competitors || [];
+    const index = competitors.findIndex(c => c.name.toLowerCase() === name.toLowerCase());
 
     if (index === -1) {
       console.log();
       console.log(chalk.yellow(`Competitor "${name}" not found.`));
       console.log();
       console.log(chalk.dim('  Current competitors:'));
-      for (const comp of profile.competitors) {
+      for (const comp of competitors) {
         console.log(chalk.dim(`    • ${comp.name}`));
       }
       console.log();
       return;
     }
 
-    const removed = profile.competitors[index];
-    const updatedCompetitors = profile.competitors.filter((_, i) => i !== index);
+    const removed = competitors[index];
+    const updatedCompetitors = competitors.filter((_, i) => i !== index);
 
     await client.updateBrand({ competitors: updatedCompetitors });
 

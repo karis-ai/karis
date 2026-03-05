@@ -41,18 +41,23 @@ export class RemoteAgent implements AgentInterface {
     const brandProfile = await this.client.getBrand();
     if (!brandProfile) return null;
 
+    const industries = brandProfile.industries?.join(', ') || 'N/A';
+    const primaryAudience = brandProfile.audience?.primary || 'N/A';
+    const valueProps = brandProfile.value_propositions?.join('; ') || 'N/A';
+    const keywords = brandProfile.keywords?.join(', ') || 'N/A';
+
     return {
       role: 'system',
       content: `Brand Context:
-- Name: ${brandProfile.name}
+- Name: ${brandProfile.name || brandProfile.domain}
 - Domain: ${brandProfile.domain}
-- Category: ${brandProfile.category}
-- Industries: ${brandProfile.industries.join(', ')}
-- Primary Audience: ${brandProfile.audience.primary}
-- Value Propositions: ${brandProfile.value_propositions.join('; ')}
-- Keywords: ${brandProfile.keywords.join(', ')}
+- Category: ${brandProfile.category || 'N/A'}
+- Industries: ${industries}
+- Primary Audience: ${primaryAudience}
+- Value Propositions: ${valueProps}
+- Keywords: ${keywords}
 
-You are the CMO for ${brandProfile.name}. Use this context to provide strategic marketing advice.`,
+You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this context to provide strategic marketing advice.`,
     };
   }
 
