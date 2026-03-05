@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BrandProfile",
+  "description": "Structured brand intelligence profile used by all Karis skills",
+  "type": "object",
+  "required": ["name", "domain", "category", "industries", "audience", "competitors", "keywords"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Brand or product name"
+    },
+    "domain": {
+      "type": "string",
+      "description": "Primary website domain (e.g., acme.com)"
+    },
+    "category": {
+      "type": "string",
+      "description": "Product category (e.g., 'project management software')"
+    },
+    "industries": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Industries the brand operates in"
+    },
+    "audience": {
+      "type": "object",
+      "required": ["primary"],
+      "properties": {
+        "primary": {
+          "type": "string",
+          "description": "Primary target audience"
+        },
+        "secondary": {
+          "type": "string",
+          "description": "Secondary target audience"
+        }
+      }
+    },
+    "value_propositions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Key value propositions (1-3)"
+    },
+    "competitors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "domain"],
+        "properties": {
+          "name": { "type": "string" },
+          "domain": { "type": "string" }
+        }
+      },
+      "description": "Direct competitors"
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Target keywords (5-15)"
+    },
+    "channels": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Active marketing channels"
+    },
+    "tone": {
+      "type": "string",
+      "description": "Brand communication tone"
+    }
+  }
+}

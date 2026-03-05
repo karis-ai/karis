@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "skills": {
+    "brand-intel": {
+      "source": "/Users/mingyoo/repos/karis/skills",
+      "sourceType": "local",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "competitor-intel": {
+      "source": "/Users/mingyoo/repos/karis/skills",
+      "sourceType": "local",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "content-opportunities": {
+      "source": "/Users/mingyoo/repos/karis/skills",
+      "sourceType": "local",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "content-optimizer": {
+      "source": "/Users/mingyoo/repos/karis/skills",
+      "sourceType": "local",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "geo-audit": {
+      "source": "/Users/mingyoo/repos/karis/skills",
+      "sourceType": "local",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "prompt-research": {
+      "source": "/Users/mingyoo/repos/karis/skills",
+      "sourceType": "local",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "topic-clusters": {
+      "source": "/Users/mingyoo/repos/karis/skills",
+      "sourceType": "local",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

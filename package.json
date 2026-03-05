@@ -1,0 +1,26 @@
+{
+  "name": "karis-monorepo",
+  "private": true,
+  "description": "The open-source CMO for AI agents",
+  "workspaces": [
+    "cli"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=cli",
+    "typecheck": "npm run typecheck --workspace=cli"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karis-ai/karis.git"
+  },
+  "keywords": [
+    "geo",
+    "seo",
+    "ai-search",
+    "marketing",
+    "cmo",
+    "agent-skills",
+    "brand-intelligence"
+  ]
+}

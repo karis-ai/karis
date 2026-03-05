@@ -1,0 +1,42 @@
+{
+  "name": "karis",
+  "version": "0.1.0",
+  "description": "The open-source CMO for AI agents",
+  "bin": {
+    "karis": "./bin/karis.js"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "ora": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karis-ai/karis.git",
+    "directory": "cli"
+  },
+  "keywords": [
+    "geo",
+    "seo",
+    "ai-search",
+    "marketing",
+    "cmo",
+    "cli"
+  ]
+}
