@@ -42,6 +42,12 @@ export function registerChatCommand(program: Command): void {
         const rl = readline.createInterface({ input, output });
         const messages = brandContext ? [brandContext] : [];
 
+        // Handle readline close event
+        let readlineClosed = false;
+        rl.on('close', () => {
+          readlineClosed = true;
+        });
+
         // SIGINT handler for remote agent interrupt
         const sigintHandler = async () => {
           if (agent instanceof RemoteAgent) {
@@ -55,9 +61,36 @@ export function registerChatCommand(program: Command): void {
 
         try {
           while (true) {
-            const userInput = await rl.question(chalk.cyan('You: '));
+            // Check if readline is closed before attempting to read
+            if (readlineClosed) {
+              break;
+            }
 
-            if (!userInput.trim()) continue;
+            let userInput: string;
+            try {
+              userInput = await rl.question(chalk.cyan('You: '));
+
+              // Give time for close event to fire if stdin reached EOF
+              await new Promise(resolve => setImmediate(resolve));
+
+              if (readlineClosed) {
+                break;
+              }
+            } catch (error) {
+              // Handle readline closure error
+              if (error instanceof Error && error.message.includes('closed')) {
+                break;
+              }
+              throw error;
+            }
+
+            if (!userInput.trim()) {
+              // If input is empty and stdin is not a TTY, likely EOF reached
+              if (!process.stdin.isTTY) {
+                break;
+              }
+              continue;
+            }
 
             if (userInput.toLowerCase() === 'exit') {
               console.log();
