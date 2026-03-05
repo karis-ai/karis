@@ -166,6 +166,37 @@ export interface BrandCustomizations {
 // Legacy type for backward compatibility
 export type BrandAssetsSnapshot = BrandProfile;
 
+// Content Opportunity API Types
+export interface ContentOpportunityTaskStatus {
+  task_id: string;
+  status: 'running' | 'completed' | 'failed';
+  progress_percent: number;
+  error?: string;
+}
+
+export interface TopicCluster {
+  cluster_id: string;
+  cluster_name: string;
+  post_count: number;
+  top_posts?: Array<{ title: string; url: string; score: number }>;
+}
+
+export interface OpportunityCard {
+  card_id: string;
+  title: string;
+  description: string;
+  journey_stage?: string;
+  aspect?: string;
+  priority?: string;
+}
+
+export interface ContentOpportunityResult {
+  task_id: string;
+  topic_clusters: TopicCluster[];
+  content_opportunities: OpportunityCard[];
+  report?: string;
+}
+
 export class KarisApiError extends Error {
   constructor(
     message: string,
@@ -501,6 +532,76 @@ export class KarisClient {
       channels: undefined,
       tone: undefined,
     };
+  }
+
+  // --- Content Opportunity API ---
+
+  async startContentOpportunityAnalysis(domain: string, category?: string): Promise<{ task_id: string }> {
+    const url = `${this.apiUrl}/api/v1/content-opportunity/analyze`;
+    const body: { domain: string; category?: string } = { domain };
+    if (category) body.category = category;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    const responseBody = (await response.json()) as { data?: { task_id: string; status: string } };
+    if (!responseBody.data?.task_id) {
+      throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
+    }
+
+    return { task_id: responseBody.data.task_id };
+  }
+
+  async getContentOpportunityTaskStatus(taskId: string): Promise<ContentOpportunityTaskStatus> {
+    const url = `${this.apiUrl}/api/v1/content-opportunity/tasks/${taskId}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    const body = (await response.json()) as { data?: ContentOpportunityTaskStatus };
+    if (!body.data) {
+      throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
+    }
+
+    return body.data;
+  }
+
+  async getContentOpportunityResult(taskId: string): Promise<ContentOpportunityResult> {
+    const url = `${this.apiUrl}/api/v1/content-opportunity/tasks/${taskId}/result`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (response.status === 404) {
+      throw new KarisApiError('Analysis not found or expired', 'NOT_FOUND', 404, EXIT_RUNTIME);
+    }
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    const body = (await response.json()) as { data?: ContentOpportunityResult };
+    if (!body.data) {
+      throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
+    }
+
+    return body.data;
   }
 
   // --- SSE parsing ---
