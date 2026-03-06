@@ -7,22 +7,40 @@ import { registerBrandCommands } from './commands/brand/index.js';
 import { registerGeoCommands } from './commands/geo/index.js';
 import { registerContentCommands } from './commands/content/index.js';
 import { registerCompetitorCommands } from './commands/competitor/index.js';
+import { registerDoctorCommand } from './commands/doctor.js';
+import { registerMetaCommands } from './commands/meta.js';
 import { AgentFactory } from './core/agent-factory.js';
 import { RemoteAgent } from './core/remote-agent.js';
 import type { StreamChunk } from './core/agent-interface.js';
+import { isJsonOutput, isTextOutput, setCliContext, updateCliContext } from './core/cli-context.js';
+import { printCommandError, printCommandResult, renderStreamChunk } from './utils/output.js';
+import { createAuthRequiredError } from './core/errors.js';
 
 const program = new Command();
 
 program
   .name('karis')
   .version('0.1.0')
-  .description('The open-source CMO for AI agents');
+  .description('The open-source CMO for AI agents')
+  .option('--json', 'Emit structured JSON output')
+  .option('--jsonl', 'Emit newline-delimited JSON events');
+
+program.hook('preAction', (_thisCommand, actionCommand) => {
+  const globalOptions = actionCommand.optsWithGlobals();
+  const outputMode = globalOptions.jsonl ? 'jsonl' : globalOptions.json ? 'json' : 'text';
+  setCliContext({
+    outputMode,
+    commandPath: commandPathFor(actionCommand),
+  });
+});
 
 // --- Core commands (top-level) ---
 
 registerSetupCommand(program);
 registerChatCommand(program);
 registerConfigCommand(program);
+registerDoctorCommand(program);
+registerMetaCommands(program);
 
 // --- Brand management ---
 
@@ -37,8 +55,8 @@ registerCompetitorCommands(program);
 // --- Coming soon ---
 
 const upcomingCommands = [
-  { name: 'track', desc: 'Track brand visibility changes over time' },
-  { name: 'report', desc: 'Generate CMO weekly/monthly report' },
+  { name: 'track', desc: 'Coming soon: track brand visibility changes over time' },
+  { name: 'report', desc: 'Coming soon: generate CMO weekly/monthly report' },
 ];
 
 for (const cmd of upcomingCommands) {
@@ -51,74 +69,30 @@ for (const cmd of upcomingCommands) {
     });
 }
 
-// --- Default: Agent mode for unknown input ---
-
-function renderChunk(chunk: StreamChunk): void {
-  switch (chunk.type) {
-    case 'content':
-      if (chunk.content) process.stdout.write(chunk.content);
-      break;
-    case 'tool_start':
-      process.stdout.write(chalk.yellow(`\n  [tool] ${chunk.tool ?? 'unknown'}...`));
-      break;
-    case 'tool_end':
-      process.stdout.write(chalk.green(' done\n'));
-      break;
-    case 'done':
-      console.log('\n');
-      break;
-    case 'error':
-      console.log();
-      console.log(chalk.red(`Error: ${chunk.error}`));
-      console.log();
-      break;
-  }
-}
-
 program.on('command:*', async (operands: string[]) => {
   const input = operands.join(' ');
+  updateCliContext({
+    commandPath: 'agent.run',
+  });
 
   const agent = await AgentFactory.create();
 
   if (!(await agent.isAvailable())) {
-    console.log();
-    console.log(chalk.bold('Agent mode') + chalk.dim(` — you said: "${input}"`));
-    console.log();
-
-    if (agent.getMode() === 'remote') {
-      console.log(chalk.yellow('Remote Agent mode requires a Karis API key.'));
-      console.log();
-      console.log(`  Get your key: ${chalk.cyan('https://karis.im/settings/api-keys')}`);
-      console.log(`  Set it:       ${chalk.cyan('npx karis config set api-key <your-key>')}`);
-      console.log();
-      console.log(chalk.dim('  Or switch to Local Agent mode:'));
-      console.log(`    ${chalk.green('npx karis config set agent-mode local')}`);
-    } else {
-      console.log(chalk.yellow('Local Agent mode requires an LLM API key.'));
-      console.log();
-      console.log(`  Set OpenAI key:    ${chalk.cyan('npx karis config set openai-key sk-...')}`);
-      console.log(`  Or Anthropic key:  ${chalk.cyan('npx karis config set anthropic-key sk-ant-...')}`);
-    }
-
-    console.log();
-    console.log(chalk.dim('  Without Agent mode, you can still use:'));
-    console.log(`    ${chalk.green('npx karis geo audit mybrand.com')}        — GEO audit`);
-    console.log(`    ${chalk.green('npx karis content discover mybrand.com')}  — Content opportunities`);
-    console.log();
-    console.log(chalk.dim('  Or install Skills for your coding agent:'));
-    console.log(`    ${chalk.green('npx skills add karis-ai/karis')}           — Works in Cursor/Claude Code/Codex`);
-    console.log();
-    process.exit(1);
+    printCommandError(createAuthRequiredError());
   }
 
   const brandContext = await agent.getBrandContext();
 
-  console.log();
-  console.log(chalk.bold('CMO') + chalk.dim(` (${agent.getDescription()}) — "${input}"`));
-  console.log();
+  if (isTextOutput()) {
+    console.log();
+    console.log(chalk.bold('CMO') + chalk.dim(` (${agent.getDescription()}) — "${input}"`));
+    console.log();
+  }
 
   const messages = brandContext ? [brandContext] : [];
   messages.push({ role: 'user', content: input });
+  const chunks: StreamChunk[] = [];
+  let response = '';
 
   // SIGINT: interrupt remote agent on Ctrl+C
   const sigintHandler = async () => {
@@ -132,19 +106,50 @@ program.on('command:*', async (operands: string[]) => {
 
   try {
     for await (const chunk of agent.streamChat(messages)) {
-      renderChunk(chunk);
+      chunks.push(chunk);
+      if (chunk.type === 'content' && chunk.content) {
+        response += chunk.content;
+      }
+      renderStreamChunk(chunk);
       if (chunk.type === 'error') {
         process.exit(1);
       }
     }
+
+    if (isJsonOutput()) {
+      printCommandResult({
+        prompt: input,
+        response,
+        events: chunks,
+        conversation_id: agent instanceof RemoteAgent ? agent.getConversationId() : undefined,
+      }, {
+        command: 'agent.run',
+        meta: {
+          runtime: agent.getDescription(),
+        },
+      });
+    }
   } catch (error) {
-    console.log();
-    console.log(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
-    console.log();
-    process.exit(1);
+    printCommandError(error);
   } finally {
     process.removeListener('SIGINT', sigintHandler);
   }
 });
 
 program.parse();
+
+function commandPathFor(command: Command): string {
+  const names: string[] = [];
+  let current: Command | null = command;
+
+  while (current) {
+    const name = current.name();
+    if (name && name !== 'karis') {
+      names.push(name);
+    }
+    current = current.parent ?? null;
+  }
+
+  names.reverse();
+  return names.join('.');
+}

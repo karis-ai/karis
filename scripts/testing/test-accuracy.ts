@@ -95,10 +95,10 @@ function analyzeAuditOutput(domain: string, output: string, duration: number): A
 
   // Check for recommendations
   const recommendationPatterns = [
-    /优先级|Priority/gi,
-    /问题|Issue/gi,
-    /建议|Recommendation/gi,
-    /修复|Fix/gi,
+    /Priority/gi,
+    /Issue/gi,
+    /Recommendation/gi,
+    /Fix/gi,
   ];
 
   recommendationPatterns.forEach(pattern => {

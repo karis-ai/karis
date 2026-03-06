@@ -1,5 +1,5 @@
 /**
- * Unified Agent interface for both Remote (Karis Platform) and Local (Skills) modes
+ * Agent interface for the current Karis Platform runtime.
  */
 
 export interface ChatMessage {
@@ -15,7 +15,7 @@ export interface StreamChunk {
   error?: string;
 }
 
-export type AgentMode = 'remote' | 'local';
+export type AgentMode = 'remote';
 
 export interface AgentInterface {
   /**

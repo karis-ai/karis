@@ -4,7 +4,7 @@
 
 **User Input:**
 ```
-帮我做一个完整的营销审计
+Run a full marketing audit for me
 ```
 
 **CMO Execution:**
@@ -77,7 +77,7 @@ Your brand has 15% AI search visibility, significantly below competitors (35% an
 
 **User Input:**
 ```
-帮我规划 Q2 的内容策略
+Help me plan the Q2 content strategy
 ```
 
 **CMO Execution:**
@@ -156,7 +156,7 @@ Results:
 
 **User Input:**
 ```
-我有一篇文章，帮我优化下让它在 AI 搜索中更容易被发现
+I have an article. Help me optimize it so it is easier to discover in AI search
 ```
 
 **CMO Execution:**
@@ -213,7 +213,7 @@ Results:
 
 **User Input:**
 ```
-竞品最近在 AI 搜索中表现很好，我该怎么应对？
+My competitors have been performing well in AI search recently. How should I respond?
 ```
 
 **CMO Execution:**

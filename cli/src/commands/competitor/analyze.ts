@@ -1,17 +1,22 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { executeSingleTurn } from '../../utils/agent-helper.js';
+import { isTextOutput } from '../../core/cli-context.js';
+import { runCommand } from '../../utils/run-command.js';
+import { applyManifestHelp } from '../../utils/manifest-help.js';
 
 export function registerAnalyzeCommand(program: Command): void {
-  program
+  applyManifestHelp(program
     .command('analyze [domain]')
     .description('Analyze competitor AI search performance via Karis Platform')
-    .action(async (domain?: string) => {
+    .action(runCommand(async (domain?: string) => {
       const prompt = domain
-        ? `帮我分析 ${domain} 的竞品在 AI 搜索中的表现`
-        : `帮我分析竞品在 AI 搜索中的表现`;
+        ? `Analyze how competitors of ${domain} perform in AI search`
+        : 'Analyze competitor performance in AI search';
 
-      console.log(chalk.bold('Analyzing competitors...\n'));
+      if (isTextOutput()) {
+        console.log(chalk.bold('Analyzing competitors...\n'));
+      }
       await executeSingleTurn(prompt);
-    });
+    })), 'competitor.analyze');
 }

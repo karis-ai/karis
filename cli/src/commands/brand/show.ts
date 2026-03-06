@@ -1,30 +1,23 @@
 import chalk from 'chalk';
 import { KarisClient } from '../../core/client.js';
+import { createAuthRequiredError, createNoBrandError } from '../../core/errors.js';
+import { isTextOutput } from '../../core/cli-context.js';
+import { printCommandResult } from '../../utils/output.js';
 
 export async function runBrandShow(): Promise<void> {
   const client = await KarisClient.create();
 
   if (!client.hasApiKey()) {
-    console.log();
-    console.log(chalk.yellow('Karis API key required.'));
-    console.log();
-    console.log(chalk.dim(`  Set your key: ${chalk.cyan('npx karis config set api-key sk-ka-...')}`));
-    console.log();
-    return;
+    throw createAuthRequiredError();
   }
 
-  try {
-    const profile = await client.getBrand();
+  const profile = await client.getBrand();
 
-    if (!profile) {
-      console.log();
-      console.log(chalk.yellow('No brand profile found.'));
-      console.log();
-      console.log(chalk.dim(`  Create one: ${chalk.cyan('npx karis brand init')}`));
-      console.log();
-      return;
-    }
+  if (!profile) {
+    throw createNoBrandError();
+  }
 
+  if (isTextOutput()) {
     console.log();
     console.log(chalk.bold(`Brand Profile — ${profile.name || profile.domain}`));
     console.log();
@@ -135,9 +128,7 @@ export async function runBrandShow(): Promise<void> {
     console.log();
     console.log(chalk.dim(`  Edit: ${chalk.cyan('npx karis brand edit')}`));
     console.log();
-  } catch (error) {
-    console.log();
-    console.log(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
-    console.log();
   }
+
+  printCommandResult(profile);
 }

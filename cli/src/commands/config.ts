@@ -5,72 +5,108 @@ import {
   setConfigValue,
   listConfig,
   maskValue,
+  loadResolvedConfig,
+  SUPPORTED_CONFIG_KEYS,
 } from '../utils/config.js';
-import { success, error, section } from '../utils/output.js';
+import { success, section, printCommandResult } from '../utils/output.js';
+import { createInvalidArgumentError } from '../core/errors.js';
+import { runCommand } from '../utils/run-command.js';
+import { isTextOutput } from '../core/cli-context.js';
+import { applyManifestHelp } from '../utils/manifest-help.js';
 
 export function registerConfigCommand(program: Command): void {
   const configCmd = program
     .command('config')
     .description('Manage API keys and settings');
 
-  configCmd
+  applyManifestHelp(configCmd
     .command('set <key> <value>')
-    .description('Set a config value (e.g., api-key, openai-key, anthropic-key, agent-mode)')
-    .action(async (key: string, value: string) => {
-      // Validate agent-mode value
-      if (key === 'agent-mode' && value !== 'local' && value !== 'remote') {
-        console.log(error(`Invalid agent-mode value: ${value}. Must be 'local' or 'remote'.`));
-        return;
+    .description('Set a config value (supported: api-key, base-url)')
+    .action(runCommand(async (key: string, value: string) => {
+      if (!isSupportedConfigKey(key)) {
+        throw createInvalidArgumentError(
+          `Unsupported config key: ${key}. Supported keys: ${SUPPORTED_CONFIG_KEYS.join(', ')}.`,
+        );
       }
 
       await setConfigValue(key, value);
-      console.log(success(`Set ${chalk.bold(key)} = ${maskValue(key, value)}`));
-
-      // Show helpful message for agent-mode
-      if (key === 'agent-mode') {
-        console.log();
-        if (value === 'local') {
-          console.log(chalk.dim('Local Agent mode uses Skills + your LLM (OpenAI or Anthropic).'));
-          console.log(chalk.dim('Make sure you have set openai-key or anthropic-key.'));
-        } else {
-          console.log(chalk.dim('Remote Agent mode uses Karis Platform with enhanced features.'));
-          console.log(chalk.dim('Make sure you have set api-key from https://karis.im/settings/api-keys'));
-        }
+      if (isTextOutput()) {
+        console.log(success(`Set ${chalk.bold(key)} = ${maskValue(key, value)}`));
       }
-    });
+      printCommandResult({
+        key,
+        value: maskValue(key, value),
+      });
+    })), 'config.set');
 
-  configCmd
+  applyManifestHelp(configCmd
     .command('get <key>')
     .description('Get a config value')
-    .action(async (key: string) => {
+    .action(runCommand(async (key: string) => {
+      if (!isSupportedConfigKey(key)) {
+        throw createInvalidArgumentError(
+          `Unsupported config key: ${key}. Supported keys: ${SUPPORTED_CONFIG_KEYS.join(', ')}.`,
+        );
+      }
+
       const value = await getConfigValue(key);
       if (value === undefined) {
-        console.log(error(`Key ${chalk.bold(key)} is not set.`));
+        throw createInvalidArgumentError(`Key ${chalk.bold(key)} is not set.`);
       } else {
-        console.log(`${chalk.bold(key)} = ${maskValue(key, value)}`);
+        if (isTextOutput()) {
+          console.log(`${chalk.bold(key)} = ${maskValue(key, value)}`);
+        }
+        printCommandResult({ key, value: maskValue(key, value) });
       }
-    });
+    })), 'config.get');
 
-  configCmd
+  applyManifestHelp(configCmd
     .command('list')
     .description('List all config values')
-    .action(async () => {
+    .action(runCommand(async () => {
       const config = await listConfig();
+      const resolved = await loadResolvedConfig();
       const entries = Object.entries(config).filter(
-        (entry): entry is [string, string] => entry[1] !== undefined,
+        (entry): entry is [string, string] => entry[1] !== undefined && isSupportedConfigKey(entry[0]),
       );
       if (entries.length === 0) {
-        console.log(chalk.dim('No config values set.'));
-        console.log();
-        console.log(chalk.dim('Get started:'));
-        console.log(`  ${chalk.cyan('npx karis config set openai-key sk-...')}`);
-        console.log(`  ${chalk.cyan('npx karis config set api-key sk-ka-...')}`);
+        if (isTextOutput()) {
+          console.log(chalk.dim('No config values set.'));
+          console.log();
+          console.log(chalk.dim('Get started:'));
+          console.log(`  ${chalk.cyan('npx karis config set api-key sk-ka-...')}`);
+          console.log(`  ${chalk.cyan('npx karis config set base-url https://api.karis.im')}`);
+        }
+        printCommandResult({
+          config: {},
+          resolved: maskResolvedConfig(resolved),
+        });
         return;
       }
-      section('Karis Config');
-      for (const [key, value] of entries) {
-        console.log(`  ${chalk.bold(key)}: ${maskValue(key, value)}`);
+      if (isTextOutput()) {
+        section('Karis Config');
+        for (const [key, value] of entries) {
+          console.log(`  ${chalk.bold(key)}: ${maskValue(key, value)}`);
+        }
+        console.log();
       }
-      console.log();
-    });
+      printCommandResult({
+        config: Object.fromEntries(entries.map(([key, value]) => [key, maskValue(key, value)])),
+        resolved: maskResolvedConfig(resolved),
+      });
+    })), 'config.list');
+}
+
+function maskResolvedConfig(resolved: Awaited<ReturnType<typeof loadResolvedConfig>>) {
+  return {
+    apiKey: {
+      ...resolved.apiKey,
+      value: resolved.apiKey.value ? maskValue('api-key', resolved.apiKey.value) : undefined,
+    },
+    apiUrl: resolved.apiUrl,
+  };
+}
+
+function isSupportedConfigKey(key: string): key is typeof SUPPORTED_CONFIG_KEYS[number] {
+  return SUPPORTED_CONFIG_KEYS.includes(key as typeof SUPPORTED_CONFIG_KEYS[number]);
 }

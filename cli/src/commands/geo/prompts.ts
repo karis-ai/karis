@@ -1,15 +1,20 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { executeSingleTurn } from '../../utils/agent-helper.js';
+import { isTextOutput } from '../../core/cli-context.js';
+import { runCommand } from '../../utils/run-command.js';
+import { applyManifestHelp } from '../../utils/manifest-help.js';
 
 export function registerPromptsCommand(program: Command): void {
-  program
+  applyManifestHelp(program
     .command('prompts <topic>')
     .description('Research how users ask AI about a topic via Karis Platform')
-    .action(async (topic: string) => {
-      const prompt = `帮我研究用户如何向 AI 询问关于 "${topic}" 的问题，生成测试提示词`;
+    .action(runCommand(async (topic: string) => {
+      const prompt = `Research how users ask AI about "${topic}" and generate test prompts`;
 
-      console.log(chalk.bold(`Researching prompts for "${topic}"...\n`));
+      if (isTextOutput()) {
+        console.log(chalk.bold(`Researching prompts for "${topic}"...\n`));
+      }
       await executeSingleTurn(prompt);
-    });
+    })), 'geo.prompts');
 }

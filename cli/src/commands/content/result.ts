@@ -1,28 +1,25 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { KarisClient } from '../../core/client.js';
+import { createAuthRequiredError } from '../../core/errors.js';
+import { isTextOutput } from '../../core/cli-context.js';
+import { printCommandResult } from '../../utils/output.js';
+import { runCommand } from '../../utils/run-command.js';
+import { applyManifestHelp } from '../../utils/manifest-help.js';
 
 export function registerResultCommand(program: Command): void {
-  program
+  applyManifestHelp(program
     .command('result <task-id>')
     .description('View full results of a content opportunity analysis')
-    .action(async (taskId: string) => {
+    .action(runCommand(async (taskId: string) => {
       const client = await KarisClient.create();
 
-      // Check API key
       if (!client.hasApiKey()) {
-        console.log();
-        console.log(chalk.yellow('Karis API key required.'));
-        console.log();
-        console.log(chalk.dim(`  Set your key: ${chalk.cyan('npx karis config set api-key sk-ka-...')}`));
-        console.log(chalk.dim(`  Get a key at: ${chalk.cyan('https://karis.im/settings/api-keys')}`));
-        console.log();
-        return;
+        throw createAuthRequiredError();
       }
 
-      try {
-        const result = await client.getContentOpportunityResult(taskId);
-
+      const result = await client.getContentOpportunityResult(taskId);
+      if (isTextOutput()) {
         console.log();
         console.log(chalk.bold('Content Opportunity Analysis — Full Report'));
         console.log('────────────────────────────────────────');
@@ -75,17 +72,12 @@ export function registerResultCommand(program: Command): void {
           console.log(result.report);
           console.log();
         }
-
-      } catch (error) {
-        console.log();
-        if (error instanceof Error && error.message.includes('not found or expired')) {
-          console.log(chalk.yellow('Analysis not found or expired.'));
-          console.log();
-          console.log(chalk.dim('  Run a new analysis: ') + chalk.cyan('npx karis content discover <domain>'));
-        } else {
-          console.log(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`));
-        }
         console.log();
       }
-    });
+
+      printCommandResult({
+        task_id: taskId,
+        result,
+      });
+    })), 'content.result');
 }

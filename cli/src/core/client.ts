@@ -1,4 +1,4 @@
-import { loadConfig } from '../utils/config.js';
+import { loadResolvedConfig } from '../utils/config.js';
 
 const EXIT_AUTH = 78;
 const EXIT_RUNTIME = 1;
@@ -224,10 +224,11 @@ export class KarisClient {
   }
 
   static async create(): Promise<KarisClient> {
-    const config = await loadConfig();
-    const apiKey = process.env.KARIS_API_KEY || config['api-key'] || '';
-    const apiUrl = process.env.KARIS_API_URL || config['base-url'] || 'https://api.karis.im';
-    return new KarisClient({ apiKey, apiUrl });
+    const resolved = await loadResolvedConfig();
+    return new KarisClient({
+      apiKey: resolved.apiKey.value || '',
+      apiUrl: resolved.apiUrl.value || 'https://api.karis.im',
+    });
   }
 
   hasApiKey(): boolean {

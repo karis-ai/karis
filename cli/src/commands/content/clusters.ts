@@ -1,17 +1,22 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { executeSingleTurn } from '../../utils/agent-helper.js';
+import { isTextOutput } from '../../core/cli-context.js';
+import { runCommand } from '../../utils/run-command.js';
+import { applyManifestHelp } from '../../utils/manifest-help.js';
 
 export function registerClustersCommand(program: Command): void {
-  program
+  applyManifestHelp(program
     .command('clusters [domain]')
     .description('Generate topic cluster architecture via Karis Platform')
-    .action(async (domain?: string) => {
+    .action(runCommand(async (domain?: string) => {
       const prompt = domain
-        ? `帮我为 ${domain} 生成主题集群架构，规划内容策略`
-        : `帮我生成主题集群架构，规划内容策略`;
+        ? `Generate a topic cluster architecture and content strategy for ${domain}`
+        : 'Generate a topic cluster architecture and content strategy';
 
-      console.log(chalk.bold('Generating topic clusters...\n'));
+      if (isTextOutput()) {
+        console.log(chalk.bold('Generating topic clusters...\n'));
+      }
       await executeSingleTurn(prompt);
-    });
+    })), 'content.clusters');
 }

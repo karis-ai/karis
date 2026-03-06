@@ -29,6 +29,9 @@ Then ask your agent: *"Audit my brand's AI search visibility"* — it knows how 
 Run marketing analysis directly from your terminal:
 
 ```bash
+# Verify your environment
+npx karis doctor
+
 # First-time setup
 npx karis setup
 
@@ -36,9 +39,13 @@ npx karis setup
 npx karis geo audit mybrand.com
 npx karis content discover mybrand.com
 npx karis chat
+
+# Structured output for automation
+npx karis --json config list
+npx karis --jsonl geo audit mybrand.com
 ```
 
-**Requires:** Karis API key (free tier at [karis.im](https://karis.im))
+**Requires:** Node.js 18+ and a Karis API key (free tier at [karis.im](https://karis.im))
 
 ---
 
@@ -96,7 +103,13 @@ Agent: [Uses geo-audit skill]
 
 ### For CLI Users
 
-The CLI connects to Karis Platform for enhanced marketing intelligence.
+The current CLI runtime connects to Karis Platform for enhanced marketing intelligence.
+
+`karis` v0.2 is designed for both humans and agents:
+- Human-friendly text output by default
+- `--json` for structured single-result commands
+- `--jsonl` for streaming agent events
+- `doctor`, `schema`, `explain`, and `examples` for debugging and self-discovery
 
 **Setup:**
 ```bash
@@ -112,6 +125,9 @@ Get your API key at [karis.im/settings/api-keys](https://karis.im/settings/api-k
 **Commands:**
 
 ```bash
+# Diagnose your setup
+npx karis doctor
+
 # GEO optimization
 npx karis geo audit mybrand.com
 npx karis geo prompts "project management"
@@ -126,6 +142,11 @@ npx karis competitor analyze mybrand.com
 
 # Interactive CMO chat
 npx karis chat
+
+# Inspect command metadata
+npx karis schema geo.audit
+npx karis explain content.discover
+npx karis examples chat
 
 # Natural language commands
 npx karis "analyze my brand's AI search visibility"
@@ -143,8 +164,14 @@ npx karis "analyze my brand's AI search visibility"
 # Set API key
 npx karis config set api-key sk-ka-...
 
+# Set custom API base URL
+npx karis config set base-url https://api.karis.im
+
 # View config
 npx karis config list
+
+# JSON output for scripts
+npx karis --json config list
 ```
 
 Brand profiles are stored on Karis Platform and synced across your team
@@ -335,6 +362,34 @@ npx karis "analyze my brand's AI search visibility"
 npx karis "find content opportunities in project management"
 ```
 
+### Diagnostics And Introspection
+
+```bash
+# Diagnose auth, connectivity, runtime, and brand readiness
+npx karis doctor
+
+# Machine-readable command metadata
+npx karis schema geo.audit
+
+# Human-readable explanations
+npx karis explain content.discover
+
+# Usage examples
+npx karis examples chat
+```
+
+### Structured Output
+
+```bash
+# JSON result envelope
+npx karis --json brand show
+npx karis --json content result <task-id>
+
+# JSON Lines event stream
+npx karis --jsonl geo audit mybrand.com
+printf "What's my visibility?\nexit\n" | npx karis --jsonl chat
+```
+
 ---
 
 ## Configuration Files
@@ -343,10 +398,25 @@ Karis stores configuration globally in `~/.karis/`:
 
 ```
 ~/.karis/
-└── config.json             # API key (global)
+└── config.json             # api-key and base-url
 ```
 
 Brand profiles and marketing data are managed on Karis Platform, not stored locally.
+
+### Resolution Order
+
+The CLI resolves runtime settings in this order:
+
+1. Environment variables
+2. `~/.karis/config.json`
+3. Built-in defaults
+
+Current keys:
+
+```bash
+KARIS_API_KEY
+KARIS_API_URL
+```
 
 ---
 

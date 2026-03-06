@@ -4,10 +4,21 @@ import { homedir } from 'node:os';
 
 const KARIS_DIR = '.karis';
 const CONFIG_FILE = 'config.json';
+export const SUPPORTED_CONFIG_KEYS = ['api-key', 'base-url'] as const;
 
 export interface KarisConfig {
   'api-key'?: string;
   [key: string]: string | undefined;
+}
+
+export interface ResolvedConfigEntry {
+  value?: string;
+  source: 'env' | 'config' | 'default' | 'unset';
+}
+
+export interface ResolvedConfig {
+  apiKey: ResolvedConfigEntry;
+  apiUrl: ResolvedConfigEntry;
 }
 
 function globalConfigPath(): string {
@@ -23,7 +34,7 @@ export async function ensureKarisDir(): Promise<string> {
 export async function loadConfig(): Promise<KarisConfig> {
   try {
     const raw = await readFile(globalConfigPath(), 'utf-8');
-    return JSON.parse(raw) as KarisConfig;
+    return sanitizeConfig(JSON.parse(raw) as KarisConfig);
   } catch {
     return {};
   }
@@ -32,7 +43,8 @@ export async function loadConfig(): Promise<KarisConfig> {
 export async function saveConfig(config: KarisConfig): Promise<void> {
   await ensureKarisDir();
   const configPath = globalConfigPath();
-  await writeFile(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+  const sanitizedConfig = sanitizeConfig(config);
+  await writeFile(configPath, JSON.stringify(sanitizedConfig, null, 2) + '\n', 'utf-8');
 
   // Set restrictive permissions (600 = owner read/write only)
   try {
@@ -58,6 +70,35 @@ export async function listConfig(): Promise<KarisConfig> {
   return loadConfig();
 }
 
+export async function loadResolvedConfig(): Promise<ResolvedConfig> {
+  const config = await loadConfig();
+
+  return {
+    apiKey: resolveValue(process.env.KARIS_API_KEY, config['api-key']),
+    apiUrl: resolveValue(process.env.KARIS_API_URL, config['base-url'], 'https://api.karis.im'),
+  };
+}
+
+function resolveValue(
+  envValue: string | undefined,
+  configValue: string | undefined,
+  defaultValue?: string,
+): ResolvedConfigEntry {
+  if (envValue) {
+    return { value: envValue, source: 'env' };
+  }
+
+  if (configValue) {
+    return { value: configValue, source: 'config' };
+  }
+
+  if (defaultValue !== undefined) {
+    return { value: defaultValue, source: 'default' };
+  }
+
+  return { source: 'unset' };
+}
+
 const SENSITIVE_KEYS = ['api-key'];
 
 export function maskValue(key: string, value: string): string {
@@ -65,4 +106,16 @@ export function maskValue(key: string, value: string): string {
     return value.slice(0, 5) + '...' + value.slice(-3);
   }
   return value;
+}
+
+function sanitizeConfig(config: KarisConfig): KarisConfig {
+  return Object.fromEntries(
+    Object.entries(config).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined && isSupportedConfigKey(entry[0]),
+    ),
+  );
+}
+
+function isSupportedConfigKey(key: string): key is typeof SUPPORTED_CONFIG_KEYS[number] {
+  return SUPPORTED_CONFIG_KEYS.includes(key as typeof SUPPORTED_CONFIG_KEYS[number]);
 }

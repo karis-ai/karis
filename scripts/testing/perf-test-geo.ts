@@ -27,7 +27,7 @@ async function testGeoAuditPerformance() {
   };
 
   const agent = await AgentFactory.create();
-  const messages = [{ role: 'user' as const, content: '帮我对 karis.im 做一个 GEO audit' }];
+  const messages = [{ role: 'user' as const, content: 'Run a GEO audit for karis.im' }];
 
   let currentTool: { tool: string; startTime: number } | null = null;
 

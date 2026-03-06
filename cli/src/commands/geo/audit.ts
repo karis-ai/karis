@@ -1,17 +1,22 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { executeSingleTurn } from '../../utils/agent-helper.js';
+import { isTextOutput } from '../../core/cli-context.js';
+import { runCommand } from '../../utils/run-command.js';
+import { applyManifestHelp } from '../../utils/manifest-help.js';
 
 export function registerAuditCommand(program: Command): void {
-  program
+  applyManifestHelp(program
     .command('audit [domain]')
     .description('Run professional GEO audit via Karis Platform')
-    .action(async (domain?: string) => {
+    .action(runCommand(async (domain?: string) => {
       const prompt = domain
-        ? `帮我对 ${domain} 做一个 GEO audit，测量 AI 搜索可见度`
-        : `帮我做一个 GEO audit，测量我的品牌在 AI 搜索引擎中的可见度`;
+        ? `Run a GEO audit for ${domain} to measure AI search visibility`
+        : 'Run a GEO audit to measure my brand visibility in AI search engines';
 
-      console.log(chalk.bold('Running professional GEO audit...\n'));
+      if (isTextOutput()) {
+        console.log(chalk.bold('Running professional GEO audit...\n'));
+      }
       await executeSingleTurn(prompt);
-    });
+    })), 'geo.audit');
 }

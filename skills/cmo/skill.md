@@ -80,13 +80,13 @@ Match the goal to skills:
 
 | User Goal | Skills to Execute | Order |
 |-----------|------------------|-------|
-| "提升 AI 搜索可见度" | geo-audit → content-discover → geo-optimize | Sequential |
-| "了解竞品表现" | competitor-analyze | Single |
-| "发现内容机会" | content-discover | Single |
-| "完整营销审计" | geo-audit → competitor-analyze → content-discover | Sequential |
-| "优化现有内容" | geo-optimize | Single |
-| "规划内容策略" | content-clusters → content-discover | Sequential |
-| "研究用户搜索行为" | geo-prompts | Single |
+| "Improve AI search visibility" | geo-audit → content-discover → geo-optimize | Sequential |
+| "Understand competitor performance" | competitor-analyze | Single |
+| "Find content opportunities" | content-discover | Single |
+| "Run a full marketing audit" | geo-audit → competitor-analyze → content-discover | Sequential |
+| "Optimize existing content" | geo-optimize | Single |
+| "Plan a content strategy" | content-clusters → content-discover | Sequential |
+| "Research user search behavior" | geo-prompts | Single |
 
 ### 3. Execute Skills
 
@@ -109,7 +109,7 @@ After execution:
 ### Pattern 1: Single Skill Execution
 
 ```
-User: "帮我做个 GEO audit"
+User: "Run a GEO audit for me"
 ↓
 Load geo-audit skill
 ↓
@@ -121,7 +121,7 @@ Return results
 ### Pattern 2: Sequential Skill Chain
 
 ```
-User: "帮我提升品牌在 AI 搜索中的可见度"
+User: "Help me improve my brand's visibility in AI search"
 ↓
 Step 1: Execute geo-audit (measure current state)
 ↓
@@ -139,7 +139,7 @@ Synthesize all results → provide recommendations
 ### Pattern 3: Parallel + Synthesis
 
 ```
-User: "帮我做完整的营销分析"
+User: "Run a full marketing analysis for me"
 ↓
 Execute in parallel:
 ├── geo-audit (brand visibility)
@@ -172,95 +172,95 @@ Synthesize results → comprehensive report
 
 ### Example 1: Visibility Improvement
 
-**User**: "我的品牌在 ChatGPT 中几乎没有可见度，怎么办？"
+**User**: "My brand is barely visible in ChatGPT. What should I do?"
 
 **CMO Response**:
 ```
-我来帮你系统性地解决这个问题。我会分三步：
+I will tackle this systematically in three steps:
 
-1. 先做 GEO audit 了解现状
-2. 发现内容机会
-3. 提供优化建议
+1. Run a GEO audit to understand the current state
+2. Discover content opportunities
+3. Provide optimization recommendations
 
-开始执行...
+Starting now...
 
 [Execute geo-audit]
 [Analyze results]
 
-发现问题：
-- Answer Share: 5% (行业平均 25%)
-- Gap Topics: 12 个高价值话题未覆盖
-- 主要竞品 X 和 Y 在比较型查询中占主导
+Issues found:
+- Answer Share: 5% (industry average: 25%)
+- Gap Topics: 12 high-value topics are not covered
+- Major competitors X and Y dominate comparison-style queries
 
-接下来发现内容机会...
+Next, I will discover content opportunities...
 
 [Execute content-discover]
 [Analyze results]
 
-发现机会：
-- 高优先级主题：3 个
-- 中优先级主题：5 个
+Opportunities found:
+- High-priority themes: 3
+- Medium-priority themes: 5
 
-综合建议：
-1. [HIGH] 创建 "X vs Y vs 你的品牌" 对比指南
-2. [HIGH] 针对 Gap Topics 创建 FAQ 内容
-3. [MEDIUM] 优化现有产品页面
+Combined recommendations:
+1. [HIGH] Create an "X vs Y vs Your Brand" comparison guide
+2. [HIGH] Create FAQ content for the gap topics
+3. [MEDIUM] Optimize existing product pages
 ```
 
 ### Example 2: Content Strategy
 
-**User**: "帮我规划下个季度的内容策略"
+**User**: "Help me plan next quarter's content strategy"
 
 **CMO Response**:
 ```
-我会帮你构建系统化的内容策略：
+I will help you build a systematic content strategy:
 
-1. 生成主题集群架构
-2. 发现社区热点话题
-3. 整合成执行计划
+1. Generate a topic cluster architecture
+2. Discover high-signal community themes
+3. Turn them into an execution plan
 
 [Execute content-clusters]
 [Execute content-discover]
 
-内容架构：
-- 3 个支柱主题
-- 15 个子主题
-- 优先级排序
+Content architecture:
+- 3 pillar topics
+- 15 subtopics
+- Prioritized ordering
 
-社区热点：
-- 5 个高参与度话题
-- 与你的主题集群的匹配度
+Community signals:
+- 5 high-engagement topics
+- Mapped alignment with your topic clusters
 
-Q2 内容计划：
-Week 1-2: [支柱主题 1]
-Week 3-4: [支柱主题 2]
+Q2 content plan:
+Week 1-2: [Pillar Topic 1]
+Week 3-4: [Pillar Topic 2]
 ...
 ```
 
 ### Example 3: Competitive Analysis
 
-**User**: "分析下竞品在 AI 搜索中的表现"
+**User**: "Analyze how competitors perform in AI search"
 
 **CMO Response**:
 ```
 [Execute competitor-analyze]
 
-竞品分析结果：
+Competitor analysis results:
 
 Competitor A:
 - Answer Share: 45%
-- 强势话题：X, Y, Z
-- 弱势话题：A, B
+- Strong topics: X, Y, Z
+- Weak topics: A, B
 
 Competitor B:
 - Answer Share: 30%
-- 强势话题：M, N
-- 弱势话题：P, Q
+- Strong topics: M, N
+- Weak topics: P, Q
 
-你的机会：
-1. 在 A, B 话题上超越 Competitor A
-2. 在 P, Q 话题上超越 Competitor B
-3. 创建独特内容覆盖未被占领的话题
+Your opportunities:
+1. Outperform Competitor A on topics A and B
+2. Outperform Competitor B on topics P and Q
+3. Create distinctive content around unowned topics
 ```
 
 ## Skill Combination Strategies

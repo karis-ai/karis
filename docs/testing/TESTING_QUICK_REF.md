@@ -36,7 +36,7 @@ npx tsx test-accuracy.ts
 - `TESTING_README.md` - Quick reference
 - `TESTING_GUIDE.md` - Complete guide
 - `PERFORMANCE_REPORT.md` - Performance results
-- `测试完成报告.md` - Chinese summary
+- `TESTING_COMPLETION_REPORT.md` - completion summary
 
 ## 🎯 Test Coverage
 

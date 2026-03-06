@@ -202,8 +202,8 @@ async function testAccuracy() {
     const output = result.stdout;
     const hasTitle = output.includes('GEO Audit Report') || output.includes('🔍');
     const hasScore = /\d+\s*\/\s*100/.test(output);
-    const hasDimensions = output.includes('维度') || output.includes('Dimension') || output.includes('AI Crawler');
-    const hasRecommendations = output.includes('优先级') || output.includes('Priority') || output.includes('问题');
+    const hasDimensions = output.includes('Dimension') || output.includes('AI Crawler');
+    const hasRecommendations = output.includes('Priority') || output.includes('Issue');
 
     const status = result.exitCode === 0 && hasTitle && hasScore && hasDimensions ? 'PASS' : 'FAIL';
     results.push({

@@ -1,0 +1,115 @@
+import { KarisApiError } from './client.js';
+
+export class CliError extends Error {
+  readonly code: string;
+  readonly exitCode: number;
+  readonly nextSteps: string[];
+  readonly details?: unknown;
+
+  constructor(
+    message: string,
+    options: {
+      code: string;
+      exitCode?: number;
+      nextSteps?: string[];
+      details?: unknown;
+    },
+  ) {
+    super(message);
+    this.name = 'CliError';
+    this.code = options.code;
+    this.exitCode = options.exitCode ?? 1;
+    this.nextSteps = options.nextSteps ?? [];
+    this.details = options.details;
+  }
+}
+
+export function createAuthRequiredError(): CliError {
+  return new CliError('Karis API key required.', {
+    code: 'AUTH_REQUIRED',
+    exitCode: 78,
+    nextSteps: [
+      'Run `npx karis config set api-key <your-key>` to configure your API key',
+      'Or use the `KARIS_API_KEY` environment variable',
+      'Get an API key at https://karis.im/settings/api-keys',
+    ],
+  });
+}
+
+export function createNoBrandError(): CliError {
+  return new CliError('No brand profile found.', {
+    code: 'NO_BRAND',
+    exitCode: 1,
+    nextSteps: [
+      'Run `npx karis brand init` to create a brand profile',
+    ],
+  });
+}
+
+export function createInvalidArgumentError(message: string, nextSteps: string[] = []): CliError {
+  return new CliError(message, {
+    code: 'INVALID_ARGUMENT',
+    exitCode: 2,
+    nextSteps,
+  });
+}
+
+export function createUnsupportedModeError(message: string, nextSteps: string[] = []): CliError {
+  return new CliError(message, {
+    code: 'UNSUPPORTED_MODE',
+    exitCode: 2,
+    nextSteps,
+  });
+}
+
+export function normalizeError(error: unknown): CliError {
+  if (error instanceof CliError) {
+    return error;
+  }
+
+  if (error instanceof KarisApiError) {
+    return new CliError(error.message, {
+      code: error.code,
+      exitCode: error.exitCode,
+      nextSteps: nextStepsForApiCode(error.code),
+      details: {
+        statusCode: error.statusCode,
+      },
+    });
+  }
+
+  if (error instanceof Error) {
+    return new CliError(error.message, {
+      code: 'UNEXPECTED_ERROR',
+      exitCode: 1,
+    });
+  }
+
+  return new CliError(String(error), {
+    code: 'UNEXPECTED_ERROR',
+    exitCode: 1,
+  });
+}
+
+function nextStepsForApiCode(code: string): string[] {
+  switch (code) {
+    case 'INVALID_KEY':
+    case 'KEY_EXPIRED':
+    case 'KEY_DISABLED':
+      return [
+        'Check whether the current API key is valid and still active',
+        'Create or re-enable an API key at https://karis.im/settings/api-keys',
+      ];
+    case 'INSUFFICIENT_CREDITS':
+      return [
+        'Check the current API key credit balance or limit',
+        'Retry with an API key that has available credits',
+      ];
+    case 'NO_BRAND':
+      return [
+        'Run `npx karis brand init` to create a brand profile',
+      ];
+    default:
+      return [];
+  }
+}

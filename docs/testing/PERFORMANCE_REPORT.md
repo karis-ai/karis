@@ -315,7 +315,7 @@ The Karis CLI meets or exceeds all performance targets and is ready for producti
 
 ```
 === Karis CLI Performance Testing ===
-Started: 2026年 3月 5日 星期四 17时58分54秒 CST
+Started: Thu Mar 5 17:58:54 CST 2026
 
 Test 1: Configuration Setup
   Duration: 3135ms
@@ -330,7 +330,7 @@ Test 4: Brand Show (No Profile)
   Duration: 2716ms
 
 === Basic Tests Complete ===
-Completed: 2026年 3月 5日 星期四 17时59分02秒 CST
+Completed: Thu Mar 5 17:59:02 CST 2026
 ```
 
 ### GEO Audit Detailed Log

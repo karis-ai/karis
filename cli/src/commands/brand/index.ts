@@ -3,27 +3,29 @@ import { runBrandInit } from './init.js';
 import { runBrandShow } from './show.js';
 import { runBrandEdit } from './edit.js';
 import { runCompetitorAdd, runCompetitorRemove } from './competitor.js';
+import { runCommand } from '../../utils/run-command.js';
+import { applyManifestHelp } from '../../utils/manifest-help.js';
 
 export function registerBrandCommands(program: Command): void {
   const brand = program
     .command('brand')
-    .description('Manage your brand profile (.karis/brand.json)');
+    .description('Manage your brand profile on Karis Platform');
 
-  brand
+  applyManifestHelp(brand
     .command('init')
     .description('Interactive brand profile setup')
     .option('-d, --domain <domain>', 'Auto-detect from domain')
-    .action(runBrandInit);
+    .action(runCommand(runBrandInit)), 'brand.init');
 
-  brand
+  applyManifestHelp(brand
     .command('show')
     .description('Display current brand profile')
-    .action(runBrandShow);
+    .action(runCommand(runBrandShow)), 'brand.show');
 
-  brand
+  applyManifestHelp(brand
     .command('edit [field]')
     .description('Edit a specific field or full profile')
-    .action(runBrandEdit);
+    .action(runCommand(runBrandEdit)), 'brand.edit');
 
   const competitor = brand
     .command('competitor')
@@ -32,10 +34,10 @@ export function registerBrandCommands(program: Command): void {
   competitor
     .command('add <name:domain>')
     .description('Add a competitor (e.g. "Linear:linear.app")')
-    .action(runCompetitorAdd);
+    .action(runCommand(runCompetitorAdd));
 
   competitor
     .command('remove <name>')
     .description('Remove a competitor by name')
-    .action(runCompetitorRemove);
+    .action(runCommand(runCompetitorRemove));
 }
