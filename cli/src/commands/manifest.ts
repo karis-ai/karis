@@ -23,6 +23,23 @@ export interface CommandManifest {
 
 const manifests: CommandManifest[] = [
   {
+    id: 'setup',
+    summary: 'Run first-time setup',
+    description: 'Guide the user through API key configuration and optional brand profile creation.',
+    options: [
+      { flags: '-k, --api-key <key>', description: 'Provide the API key directly' },
+      { flags: '--base-url <url>', description: 'Persist a custom API base URL' },
+      { flags: '-d, --domain <domain>', description: 'Provide the brand domain directly' },
+      { flags: '--skip-brand', description: 'Skip brand profile creation' },
+    ],
+    output: 'text|json|jsonl',
+    examples: [
+      { description: 'Run interactive setup', command: 'npx karis setup' },
+      { description: 'Set up with a provided API key', command: 'npx karis setup --api-key sk-ka-...' },
+      { description: 'Set up without creating a brand profile', command: 'npx karis setup --skip-brand' },
+    ],
+  },
+  {
     id: 'config.set',
     summary: 'Set a config value',
     description: 'Set a supported CLI config value. Currently supports api-key and base-url.',

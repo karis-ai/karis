@@ -1,199 +1,286 @@
+import { Command } from 'commander';
 import chalk from 'chalk';
-import * as readline from 'node:readline/promises';
-import { stdin as input, stdout as output } from 'node:process';
-import { KarisClient } from '../core/client.js';
-import { getConfigValue, setConfigValue } from '../utils/config.js';
-import { runBrandInit } from './brand/init.js';
+import ora from 'ora';
+import { KarisClient, type APIKeyInfo, type BrandProfile } from '../core/client.js';
+import { loadResolvedConfig, maskValue, setConfigValue } from '../utils/config.js';
+import { InteractiveSession } from '../utils/interactive.js';
+import { emitStructuredEvent, printCommandResult, section, success, warning } from '../utils/output.js';
+import { isTextOutput } from '../core/cli-context.js';
+import { runCommand } from '../utils/run-command.js';
+import { applyManifestHelp } from '../utils/manifest-help.js';
 
-async function ask(rl: readline.Interface, question: string): Promise<string> {
-  try {
-    const answer = (await rl.question(`  ${question}: `)).trim();
-    return answer;
-  } catch (error) {
-    // If readline is closed, return empty string
-    if (error instanceof Error && error.message.includes('closed')) {
-      return '';
+const API_KEYS_URL = 'https://karis.im/settings/api-keys';
+
+interface SetupOptions {
+  apiKey?: string;
+  baseUrl?: string;
+  domain?: string;
+  skipBrand?: boolean;
+}
+
+type SetupApiKeySource = 'flag' | 'prompt' | 'config' | 'env' | 'unset';
+
+export async function runSetup(options: SetupOptions = {}): Promise<void> {
+  const resolved = await loadResolvedConfig();
+  const apiUrl = options.baseUrl || resolved.apiUrl.value || 'https://api.karis.im';
+  const session = new InteractiveSession();
+  let apiKeySource: SetupApiKeySource =
+    options.apiKey ? 'flag' : resolved.apiKey.value ? toSetupApiKeySource(resolved.apiKey.source) : 'unset';
+  let apiKey = options.apiKey || resolved.apiKey.value;
+  let keyInfo: APIKeyInfo | undefined;
+  let baseUrlSaved = false;
+  let apiKeySaved = false;
+  let brandStatus: 'created' | 'existing' | 'skipped' | 'deferred' = 'skipped';
+  let brandProfile: BrandProfile | undefined;
+
+  if (isTextOutput()) {
+    console.log();
+    console.log(chalk.bold.cyan('Welcome to Karis'));
+    console.log();
+    console.log(chalk.dim('We will set up your API access and optionally create a brand profile.'));
+    console.log();
+  }
+
+  if (options.baseUrl) {
+    await setConfigValue('base-url', options.baseUrl);
+    baseUrlSaved = true;
+    if (isTextOutput()) {
+      console.log(success(`Saved base URL: ${options.baseUrl}`));
+      console.log();
+    } else {
+      emitStructuredEvent({
+        type: 'status',
+        stage: 'base_url_saved',
+        base_url: options.baseUrl,
+      });
     }
+  }
+
+  if (isTextOutput()) {
+    section('Step 1: API Key');
+  }
+
+  if (apiKey) {
+    if (isTextOutput()) {
+      console.log(chalk.dim(`Using API key from ${apiKeySource}: ${maskValue('api-key', apiKey)}`));
+      console.log(chalk.dim(`Create or manage keys at ${API_KEYS_URL}`));
+      console.log();
+    }
+
+    keyInfo = await verifyApiKey(apiKey, apiUrl);
+    if (apiKeySource === 'flag') {
+      await setConfigValue('api-key', apiKey);
+      apiKeySaved = true;
+    }
+    if (isTextOutput()) {
+      console.log(success(`API key verified: ${keyInfo.name} (${keyInfo.key_prefix}...)`));
+      console.log();
+    }
+  } else {
+    if (isTextOutput()) {
+      console.log(chalk.dim(`Paste an API key below, or leave it blank and create one at:`));
+      console.log(chalk.dim(`  ${API_KEYS_URL}`));
+      console.log();
+    }
+
+    const enteredApiKey = await session.ask('Enter your Karis API key (leave blank to set it up later)');
+    if (!enteredApiKey) {
+      session.close();
+
+      if (isTextOutput()) {
+        console.log();
+        console.log(warning('Setup paused. No API key was provided.'));
+        console.log(chalk.dim(`Create one at: ${API_KEYS_URL}`));
+        console.log(chalk.dim(`Then run: ${chalk.cyan('npx karis setup')}`));
+        console.log();
+      }
+
+      printCommandResult({
+        action: 'setup',
+        configured: false,
+        api_key: {
+          provided: false,
+          source: 'unset',
+          create_url: API_KEYS_URL,
+        },
+        base_url: {
+          value: apiUrl,
+          saved: baseUrlSaved,
+        },
+        brand: {
+          status: 'deferred',
+        },
+        prompts: session.getTranscript(),
+      });
+      return;
+    }
+
+    apiKey = enteredApiKey;
+    apiKeySource = 'prompt';
+    keyInfo = await verifyApiKey(apiKey, apiUrl);
+    await setConfigValue('api-key', apiKey);
+    apiKeySaved = true;
+
+    if (isTextOutput()) {
+      console.log();
+      console.log(success(`API key verified and saved: ${keyInfo.name} (${keyInfo.key_prefix}...)`));
+      console.log();
+    }
+  }
+
+  const client = new KarisClient({ apiKey, apiUrl });
+
+  if (options.skipBrand) {
+    brandStatus = 'skipped';
+  } else {
+    if (isTextOutput()) {
+      section('Step 2: Brand Profile');
+    }
+
+    const existingBrand = await client.getBrand();
+    if (existingBrand) {
+      brandProfile = existingBrand;
+      brandStatus = 'existing';
+
+      if (isTextOutput()) {
+        console.log(success(`Brand profile already exists: ${chalk.bold(existingBrand.name || existingBrand.domain)}`));
+        console.log();
+      }
+
+      const shouldCreate = await session.ask('Create or replace the brand profile now? (y/N)', {
+        defaultValue: 'N',
+      });
+
+      if (shouldCreate.toLowerCase() === 'y') {
+        brandProfile = await createBrandProfile(client, session, options.domain);
+        brandStatus = 'created';
+      }
+    } else {
+      brandProfile = await createBrandProfile(client, session, options.domain);
+      brandStatus = brandProfile ? 'created' : 'deferred';
+    }
+  }
+
+  session.close();
+
+  if (isTextOutput()) {
+    printSetupComplete(brandProfile);
+  }
+
+  printCommandResult({
+    action: 'setup',
+    configured: true,
+    api_key: {
+      provided: true,
+      source: apiKeySource,
+      saved: apiKeySaved || apiKeySource === 'config',
+      verified: true,
+      key_name: keyInfo?.name,
+      key_prefix: keyInfo?.key_prefix,
+    },
+    base_url: {
+      value: apiUrl,
+      saved: baseUrlSaved,
+    },
+    brand: {
+      status: brandStatus,
+      name: brandProfile?.name,
+      domain: brandProfile?.domain,
+    },
+    prompts: session.getTranscript(),
+  });
+}
+
+async function verifyApiKey(apiKey: string, apiUrl: string): Promise<APIKeyInfo> {
+  const spinner = isTextOutput() ? ora('Verifying API key...').start() : null;
+  const client = new KarisClient({ apiKey, apiUrl });
+
+  try {
+    const info = await client.verifyKey();
+    spinner?.succeed('API key is valid.');
+    return info;
+  } catch (error) {
+    spinner?.fail('API key verification failed.');
     throw error;
   }
 }
 
-export async function runSetup(): Promise<void> {
-  console.log();
-  console.log(chalk.bold.cyan('Welcome to Karis! 🚀'));
-  console.log();
-  console.log('Let\'s get you set up in 2 steps:');
-  console.log(chalk.dim('  1. Configure your Karis API key'));
-  console.log(chalk.dim('  2. Create your brand profile'));
-  console.log();
-
-  const rl = readline.createInterface({ input, output });
-
-  // Handle readline close event
-  let readlineClosed = false;
-  rl.on('close', () => {
-    readlineClosed = true;
-  });
-
-  // Step 1: Check API key
-  let apiKey = await getConfigValue('api-key');
-
-  if (apiKey) {
-    console.log(chalk.green('✓ API key already configured'));
+async function createBrandProfile(
+  client: KarisClient,
+  session: InteractiveSession,
+  providedDomain?: string,
+): Promise<BrandProfile | undefined> {
+  if (isTextOutput()) {
+    console.log(chalk.dim('You can skip this step and run `npx karis brand init` later.'));
     console.log();
-
-    if (readlineClosed) {
-      console.log();
-      console.log(chalk.bold.green('Setup complete! 🎉'));
-      console.log();
-      console.log(chalk.dim('Next steps:'));
-      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
-      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
-      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
-      console.log();
-      return;
-    }
-
-    const change = await ask(rl, 'Use a different API key? (y/N)');
-
-    // Give time for close event to fire if stdin reached EOF
-    await new Promise(resolve => setImmediate(resolve));
-
-    if (readlineClosed) {
-      console.log();
-      console.log(chalk.bold.green('Setup complete! 🎉'));
-      console.log();
-      console.log(chalk.dim('Next steps:'));
-      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
-      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
-      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
-      console.log();
-      return;
-    }
-
-    if (change.toLowerCase() === 'y') {
-      apiKey = undefined;
-    }
   }
 
-  if (!apiKey) {
-    console.log(chalk.bold('Step 1: API Key'));
-    console.log();
-    console.log(chalk.dim('  Get your API key at: https://karis.im/settings/api-keys'));
-    console.log();
-
-    apiKey = await ask(rl, 'Enter your Karis API key');
-
-    if (!apiKey) {
+  const domain = providedDomain || await session.ask('Brand domain (leave blank to skip)');
+  if (!domain) {
+    if (isTextOutput()) {
+      console.log(warning('Skipped brand profile creation.'));
       console.log();
-      console.log(chalk.yellow('API key is required to continue.'));
-      console.log();
-      console.log(chalk.dim('  Run setup again when you have your key:'));
-      console.log(chalk.dim(`    ${chalk.cyan('npx karis setup')}`));
-      console.log();
-      rl.close();
-      return;
     }
-
-    // Verify the key
-    console.log();
-    console.log(chalk.dim('Verifying API key...'));
-
-    const client = new KarisClient({ apiKey });
-
-    try {
-      const keyInfo = await client.verifyKey();
-      await setConfigValue('api-key', apiKey);
-
-      console.log();
-      console.log(chalk.green('✓ API key verified and saved'));
-      console.log(chalk.dim(`  Key: ${keyInfo.name} (${keyInfo.key_prefix}...)`));
-      console.log();
-    } catch (error) {
-      console.log();
-      console.log(chalk.red('✗ Invalid API key'));
-      console.log();
-      console.log(chalk.dim('  Please check your key and try again:'));
-      console.log(chalk.dim(`    ${chalk.cyan('npx karis setup')}`));
-      console.log();
-      rl.close();
-      return;
-    }
+    return undefined;
   }
 
-  // Step 2: Check brand profile
-  const client = await KarisClient.create();
-  const existingBrand = await client.getBrand();
-
-  if (existingBrand) {
-    console.log(chalk.green(`✓ Brand profile already exists: ${chalk.bold(existingBrand.name)}`));
-    console.log();
-
-    if (readlineClosed) {
-      console.log();
-      console.log(chalk.bold.green('Setup complete! 🎉'));
-      console.log();
-      console.log(chalk.dim('Next steps:'));
-      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
-      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
-      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
-      console.log();
-      return;
-    }
-
-    const recreate = await ask(rl, 'Create a new brand profile? (y/N)');
-
-    // Give time for close event to fire if stdin reached EOF
-    await new Promise(resolve => setImmediate(resolve));
-
-    if (readlineClosed) {
-      console.log();
-      console.log(chalk.bold.green('Setup complete! 🎉'));
-      console.log();
-      console.log(chalk.dim('Next steps:'));
-      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
-      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
-      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
-      console.log();
-      return;
-    }
-
-    if (recreate.toLowerCase() !== 'y') {
-      rl.close();
-      console.log();
-      console.log(chalk.bold.green('Setup complete! 🎉'));
-      console.log();
-      console.log(chalk.dim('Next steps:'));
-      console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
-      console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
-      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
-      console.log();
-      return;
-    }
+  if (!isTextOutput()) {
+    emitStructuredEvent({
+      type: 'status',
+      stage: 'brand_analyzing',
+      domain,
+    });
   }
 
-  rl.close();
+  const spinner = isTextOutput() ? ora('Analyzing brand assets and creating profile...').start() : null;
 
-  console.log();
-  console.log(chalk.bold('Step 2: Brand Profile'));
-  console.log();
+  try {
+    const profile = await client.createBrand(domain);
+    spinner?.succeed('Brand profile created.');
 
-  // Run brand init
-  await runBrandInit({});
+    if (isTextOutput()) {
+      console.log(success(`Brand profile for ${profile.name || domain} is ready.`));
+      console.log();
+    }
 
+    return profile;
+  } catch (error) {
+    spinner?.fail('Failed to create brand profile.');
+    throw error;
+  }
+}
+
+function printSetupComplete(profile?: BrandProfile): void {
   console.log();
-  console.log(chalk.bold.green('Setup complete! 🎉'));
+  console.log(chalk.bold.green('Setup complete.'));
   console.log();
   console.log(chalk.dim('Next steps:'));
-  console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
-  console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit')}`));
+  if (profile) {
+    console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
+  } else {
+    console.log(chalk.dim(`  Create a brand:    ${chalk.cyan('npx karis brand init')}`));
+  }
+  console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit mybrand.com')}`));
   console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
   console.log();
 }
 
-export function registerSetupCommand(program: any): void {
-  program
+export function registerSetupCommand(program: Command): void {
+  applyManifestHelp(program
     .command('setup')
-    .description('Interactive setup wizard for first-time users')
-    .action(runSetup);
+    .description('Interactive setup wizard for API key and brand profile')
+    .option('-k, --api-key <key>', 'Provide the API key directly')
+    .option('--base-url <url>', 'Persist a custom API base URL')
+    .option('-d, --domain <domain>', 'Provide the brand domain directly')
+    .option('--skip-brand', 'Skip brand profile creation')
+    .action(runCommand(async (options: SetupOptions) => {
+      await runSetup(options);
+    })), 'setup');
+}
+
+function toSetupApiKeySource(source: string): SetupApiKeySource {
+  if (source === 'env' || source === 'config') {
+    return source;
+  }
+  return 'unset';
 }

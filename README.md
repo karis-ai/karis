@@ -120,7 +120,8 @@ Interactive wizard guides you through:
 1. Configuring your Karis API key
 2. Creating your brand profile
 
-Get your API key at [karis.im/settings/api-keys](https://karis.im/settings/api-keys)
+If you do not have a key yet, the wizard will tell you where to create one:
+[karis.im/settings/api-keys](https://karis.im/settings/api-keys)
 
 **Commands:**
 
