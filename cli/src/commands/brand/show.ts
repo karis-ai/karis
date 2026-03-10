@@ -1,8 +1,19 @@
+import { Command } from 'commander';
 import chalk from 'chalk';
 import { KarisClient } from '../../core/client.js';
 import { createAuthRequiredError, createNoBrandError } from '../../core/errors.js';
 import { isTextOutput } from '../../core/cli-context.js';
 import { printCommandResult } from '../../utils/output.js';
+import { runCommand } from '../../utils/run-command.js';
+
+export function registerBrandShowCommand(program: Command): void {
+  program
+    .command('show')
+    .description('Display current brand profile')
+    .action(runCommand(async () => {
+      await runBrandShow();
+    }));
+}
 
 export async function runBrandShow(): Promise<void> {
   const client = await KarisClient.create();
@@ -126,7 +137,7 @@ export async function runBrandShow(): Promise<void> {
     console.log();
     console.log(chalk.dim('  ── Synced across your team via Karis Platform'));
     console.log();
-    console.log(chalk.dim(`  Edit: ${chalk.cyan('npx karis brand edit')}`));
+    console.log(chalk.dim(`  Update: ${chalk.cyan('npx karis brand init <domain>')}`));
     console.log();
   }
 

@@ -5,7 +5,18 @@ import { emitStructuredEvent, printCommandResult, success, warning, section } fr
 import { createAuthRequiredError } from '../../core/errors.js';
 import { isTextOutput } from '../../core/cli-context.js';
 import { InteractiveSession } from '../../utils/interactive.js';
+import { runCommand } from '../../utils/run-command.js';
 import ora from 'ora';
+
+export function registerBrandInitCommand(program: Command): void {
+  program
+    .command('init')
+    .description('Create brand profile from domain')
+    .argument('[domain]', 'Domain to analyze')
+    .action(runCommand(async (domain?: string) => {
+      await runBrandInit({ domain });
+    }));
+}
 
 export async function runBrandInit(options: { domain?: string }): Promise<void> {
   const client = await KarisClient.create();
@@ -104,8 +115,7 @@ export async function runBrandInit(options: { domain?: string }): Promise<void> 
       console.log();
 
       console.log(chalk.dim(`  View full profile: ${chalk.cyan('npx karis brand show')}`));
-      console.log(chalk.dim(`  Customize: ${chalk.cyan('npx karis brand edit')}`));
-      console.log(chalk.dim(`  Run GEO audit: ${chalk.cyan('npx karis geo audit ' + domain)}`));
+      console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
       console.log();
     } else {
       emitStructuredEvent({

@@ -1,0 +1,22 @@
+{
+  "name": "karis",
+  "version": "0.1.0",
+  "description": "AI-powered marketing intelligence for brand analysis, content strategy, and competitive research",
+  "author": {
+    "name": "Karis AI",
+    "email": "hello@karis.im"
+  },
+  "homepage": "https://karis.im",
+  "repository": "https://github.com/karis-ai/karis",
+  "license": "MIT",
+  "keywords": [
+    "marketing",
+    "intelligence",
+    "geo",
+    "ai-search",
+    "content-strategy",
+    "social-listening",
+    "reddit",
+    "competitive-analysis"
+  ]
+}

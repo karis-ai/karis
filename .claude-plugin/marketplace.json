@@ -1,0 +1,67 @@
+{
+  "name": "karis",
+  "owner": {
+    "name": "Karis AI",
+    "email": "hello@karis.im"
+  },
+  "metadata": {
+    "description": "AI-powered marketing intelligence for brand analysis, content strategy, and competitive research",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "aeo-geo",
+      "source": "./skills/aeo-geo",
+      "skills": "./",
+      "description": "Audit your brand's AI search visibility and website GEO readiness. Supports two modes \u2014 visibility audit (are you being mentioned by AI?) and site audit (is your site optimized for AI?). Use when users ask about AI search performance, GEO/AEO scores, brand mentions in ChatGPT/Perplexity/Claude, AI crawler accessibility, llms.txt, or content optimization for generative engines.",
+      "keywords": [],
+      "category": "marketing",
+      "version": "2.0.0"
+    },
+    {
+      "name": "brand-intel",
+      "source": "./skills/brand-intel",
+      "skills": "./",
+      "description": "Analyze a brand and recommend high-leverage growth actions. Use when users provide a brand or URL for analysis, ask what marketing actions to take, want to understand their competitive position, or need help increasing visibility and traffic. Also use before running other Karis skills to establish brand context.",
+      "keywords": [],
+      "category": "marketing",
+      "version": "2.0.0"
+    },
+    {
+      "name": "elonmusk-repost",
+      "source": "./skills/elonmusk-repost",
+      "skills": "./",
+      "description": "Analyze Elon Musk's repost patterns on X and generate tweets optimized for getting reposted by @elonmusk. Use when users want to craft viral AI/tech product launches targeting Musk's attention, go viral on X/Twitter, or optimize tweets for maximum reach.",
+      "keywords": [],
+      "category": "marketing",
+      "version": "1.2.0"
+    },
+    {
+      "name": "page-seo",
+      "source": "./skills/page-seo",
+      "skills": "./",
+      "description": "Optimize a webpage for traditional search engines (Google, Bing). Covers keyword research, competitor page analysis, on-page SEO audit with scoring, content optimization, and schema markup recommendations. Use when users ask about SEO scores, title tags, meta descriptions, keyword optimization, heading structure, internal linking, or structured data for search engines.",
+      "keywords": [],
+      "category": "marketing",
+      "version": "1.0.0"
+    },
+    {
+      "name": "reddit-growth",
+      "source": "./skills/reddit-growth",
+      "skills": "./",
+      "description": "Generate Reddit growth content including viral posts, comment strategies, and engagement plans. Use when founders or marketers want to create Reddit content for brand awareness, product launches, or community building. Works by calling Karis CLI which provides content strategy, post drafts, and engagement recommendations.",
+      "keywords": [],
+      "category": "marketing",
+      "version": "1.0.0"
+    },
+    {
+      "name": "reddit-listening",
+      "source": "./skills/reddit-listening",
+      "skills": "./",
+      "description": "Analyze Reddit discussions for brand intelligence, competitor insights, and community sentiment. Use when users want to understand Reddit conversations about their brand, track competitor mentions, discover community pain points, analyze sentiment trends, or monitor brand health on Reddit. Works by calling Karis CLI which connects to Reddit data via Karis API.",
+      "keywords": [],
+      "category": "marketing",
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -3,12 +3,9 @@ import chalk from 'chalk';
 import { registerConfigCommand } from './commands/config.js';
 import { registerChatCommand } from './commands/chat.js';
 import { registerSetupCommand } from './commands/setup.js';
-import { registerBrandCommands } from './commands/brand/index.js';
-import { registerGeoCommands } from './commands/geo/index.js';
-import { registerContentCommands } from './commands/content/index.js';
-import { registerCompetitorCommands } from './commands/competitor/index.js';
+import { registerBrandInitCommand } from './commands/brand/init.js';
+import { registerBrandShowCommand } from './commands/brand/show.js';
 import { registerDoctorCommand } from './commands/doctor.js';
-import { registerMetaCommands } from './commands/meta.js';
 import { AgentFactory } from './core/agent-factory.js';
 import { RemoteAgent } from './core/remote-agent.js';
 import type { StreamChunk } from './core/agent-interface.js';
@@ -21,7 +18,7 @@ const program = new Command();
 program
   .name('karis')
   .version('0.1.0')
-  .description('The open-source CMO for AI agents')
+  .description('Your AI-powered CMO')
   .option('--json', 'Emit structured JSON output')
   .option('--jsonl', 'Emit newline-delimited JSON events');
 
@@ -34,40 +31,23 @@ program.hook('preAction', (_thisCommand, actionCommand) => {
   });
 });
 
-// --- Core commands (top-level) ---
+// --- Primary commands ---
 
 registerSetupCommand(program);
 registerChatCommand(program);
+
+// --- Brand commands ---
+
+const brandCmd = program.command('brand').description('Manage brand profile');
+registerBrandInitCommand(brandCmd);
+registerBrandShowCommand(brandCmd);
+
+// --- Infrastructure ---
+
 registerConfigCommand(program);
 registerDoctorCommand(program);
-registerMetaCommands(program);
 
-// --- Brand management ---
-
-registerBrandCommands(program);
-
-// --- Marketing commands (grouped) ---
-
-registerGeoCommands(program);
-registerContentCommands(program);
-registerCompetitorCommands(program);
-
-// --- Coming soon ---
-
-const upcomingCommands = [
-  { name: 'track', desc: 'Coming soon: track brand visibility changes over time' },
-  { name: 'report', desc: 'Coming soon: generate CMO weekly/monthly report' },
-];
-
-for (const cmd of upcomingCommands) {
-  program
-    .command(cmd.name)
-    .description(cmd.desc)
-    .action(() => {
-      console.log(chalk.dim('Coming soon.'));
-      console.log(chalk.dim('Follow https://github.com/karis-ai/karis for updates.'));
-    });
-}
+// --- Natural language fallback ---
 
 program.on('command:*', async (operands: string[]) => {
   const input = operands.join(' ');

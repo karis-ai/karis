@@ -5,7 +5,6 @@ import { KarisClient } from '../core/client.js';
 import { printCommandResult } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
 import { isTextOutput } from '../core/cli-context.js';
-import { applyManifestHelp } from '../utils/manifest-help.js';
 
 interface DoctorCheck {
   id: string;
@@ -15,9 +14,9 @@ interface DoctorCheck {
 }
 
 export function registerDoctorCommand(program: Command): void {
-  applyManifestHelp(program
+  program
     .command('doctor')
-    .description('Diagnose config, auth, runtime, connectivity, and brand readiness')
+    .description('Check if everything is set up correctly')
     .action(runCommand(async () => {
       const resolved = await loadResolvedConfig();
       const checks: DoctorCheck[] = [];
@@ -72,7 +71,7 @@ export function registerDoctorCommand(program: Command): void {
       if (hasFailure) {
         process.exit(1);
       }
-    })), 'doctor');
+    }));
 }
 
 async function checkConnectivity(apiUrl: string): Promise<DoctorCheck> {

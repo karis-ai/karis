@@ -12,14 +12,13 @@ import { success, section, printCommandResult } from '../utils/output.js';
 import { createInvalidArgumentError } from '../core/errors.js';
 import { runCommand } from '../utils/run-command.js';
 import { isTextOutput } from '../core/cli-context.js';
-import { applyManifestHelp } from '../utils/manifest-help.js';
 
 export function registerConfigCommand(program: Command): void {
   const configCmd = program
     .command('config')
     .description('Manage API keys and settings');
 
-  applyManifestHelp(configCmd
+  configCmd
     .command('set <key> <value>')
     .description('Set a config value (supported: api-key, base-url)')
     .action(runCommand(async (key: string, value: string) => {
@@ -37,9 +36,9 @@ export function registerConfigCommand(program: Command): void {
         key,
         value: maskValue(key, value),
       });
-    })), 'config.set');
+    }));
 
-  applyManifestHelp(configCmd
+  configCmd
     .command('get <key>')
     .description('Get a config value')
     .action(runCommand(async (key: string) => {
@@ -58,9 +57,9 @@ export function registerConfigCommand(program: Command): void {
         }
         printCommandResult({ key, value: maskValue(key, value) });
       }
-    })), 'config.get');
+    }));
 
-  applyManifestHelp(configCmd
+  configCmd
     .command('list')
     .description('List all config values')
     .action(runCommand(async () => {
@@ -94,7 +93,7 @@ export function registerConfigCommand(program: Command): void {
         config: Object.fromEntries(entries.map(([key, value]) => [key, maskValue(key, value)])),
         resolved: maskResolvedConfig(resolved),
       });
-    })), 'config.list');
+    }));
 }
 
 function maskResolvedConfig(resolved: Awaited<ReturnType<typeof loadResolvedConfig>>) {

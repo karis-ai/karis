@@ -9,7 +9,6 @@ import { createUnsupportedModeError } from '../core/errors.js';
 import { isJsonLinesOutput, isJsonOutput, isTextOutput } from '../core/cli-context.js';
 import { printCommandResult } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
-import { applyManifestHelp } from '../utils/manifest-help.js';
 
 const silentOutput = new Writable({
   write(_chunk, _encoding, callback) {
@@ -18,9 +17,9 @@ const silentOutput = new Writable({
 });
 
 export function registerChatCommand(program: Command): void {
-  applyManifestHelp(program
+  program
     .command('chat')
-    .description('Interactive multi-turn conversation with CMO Agent')
+    .description('Talk to your CMO')
     .option('-c, --conversation <id>', 'Continue an existing conversation')
     .action(runCommand(async (options) => {
         const agent = await createAgent();
@@ -180,5 +179,5 @@ export function registerChatCommand(program: Command): void {
             transcript,
           });
         }
-    })), 'chat');
+    }));
 }

@@ -7,7 +7,7 @@ import { InteractiveSession } from '../utils/interactive.js';
 import { emitStructuredEvent, printCommandResult, section, success, warning } from '../utils/output.js';
 import { isTextOutput } from '../core/cli-context.js';
 import { runCommand } from '../utils/run-command.js';
-import { applyManifestHelp } from '../utils/manifest-help.js';
+import { executeSingleTurn } from '../utils/agent-helper.js';
 
 const API_KEYS_URL = 'https://karis.im/settings/api-keys';
 
@@ -189,6 +189,24 @@ export async function runSetup(options: SetupOptions = {}): Promise<void> {
     },
     prompts: session.getTranscript(),
   });
+
+  if (brandProfile && isTextOutput() && process.stdin.isTTY) {
+    const quickAuditSession = new InteractiveSession();
+      const runAudit = await quickAuditSession.ask(
+        'Run a quick audit now? (Y/n)',
+        { defaultValue: 'Y' },
+      );
+      quickAuditSession.close();
+
+      if (runAudit.toLowerCase() !== 'n') {
+        console.log();
+        console.log(chalk.bold('Running audit...\n'));
+        const domain = brandProfile.domain;
+        await executeSingleTurn(
+          `Run a comprehensive audit of my brand for ${domain} (visibility in AI search, presence, and key metrics)`,
+        );
+    }
+  }
 }
 
 async function verifyApiKey(apiKey: string, apiUrl: string): Promise<APIKeyInfo> {
@@ -254,28 +272,25 @@ function printSetupComplete(profile?: BrandProfile): void {
   console.log();
   console.log(chalk.bold.green('Setup complete.'));
   console.log();
-  console.log(chalk.dim('Next steps:'));
-  if (profile) {
-    console.log(chalk.dim(`  View your brand:  ${chalk.cyan('npx karis brand show')}`));
-  } else {
-    console.log(chalk.dim(`  Create a brand:    ${chalk.cyan('npx karis brand init')}`));
+  if (!profile) {
+    console.log(chalk.dim('Next steps:'));
+    console.log(chalk.dim(`  Create a brand:   ${chalk.cyan('npx karis brand init')}`));
+    console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
+    console.log();
   }
-  console.log(chalk.dim(`  Run GEO audit:    ${chalk.cyan('npx karis geo audit mybrand.com')}`));
-  console.log(chalk.dim(`  Chat with CMO:    ${chalk.cyan('npx karis chat')}`));
-  console.log();
 }
 
 export function registerSetupCommand(program: Command): void {
-  applyManifestHelp(program
+  program
     .command('setup')
-    .description('Interactive setup wizard for API key and brand profile')
+    .description('First-time setup — API key and brand profile')
     .option('-k, --api-key <key>', 'Provide the API key directly')
     .option('--base-url <url>', 'Persist a custom API base URL')
     .option('-d, --domain <domain>', 'Provide the brand domain directly')
     .option('--skip-brand', 'Skip brand profile creation')
     .action(runCommand(async (options: SetupOptions) => {
       await runSetup(options);
-    })), 'setup');
+    }));
 }
 
 function toSetupApiKeySource(source: string): SetupApiKeySource {
