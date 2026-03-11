@@ -631,6 +631,60 @@ export class KarisClient {
     };
   }
 
+  /** Refresh brand data from source (Brandfetch) */
+  async refreshBrand(brandId: string, scopes?: string[]): Promise<BrandProfile> {
+    const url = `${this.apiUrl}/api/v1/brand-assets/refresh`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        brand_id: brandId,
+        scopes: scopes || ['all'],
+      }),
+    });
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    const body = (await response.json()) as { data?: BrandAssetsSelection };
+    if (!body.data) {
+      throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
+    }
+
+    const data = body.data;
+    const profile = data.brand_profile?.profile;
+
+    return {
+      id: data.brand_id,
+      domain: data.canonical_domain,
+      name: data.display_name || profile?.name || data.canonical_domain,
+      description: profile?.one_liner,
+      longDescription: profile?.tagline,
+      claimed: data.binding_status === 'active',
+      tagline: profile?.tagline,
+      one_liner: profile?.one_liner,
+      category: profile?.categories?.[0],
+      categories: profile?.categories,
+      industries: profile?.inferred_industries,
+      audience: profile?.primary_audiences ? {
+        primary: profile.primary_audiences[0],
+        secondary: profile.primary_audiences[1],
+      } : undefined,
+      value_propositions: profile?.core_value_props,
+      competitors: profile?.competitive_landscape?.direct_competitor?.map(c => ({
+        name: c.name,
+        domain: c.domain,
+      })),
+      keywords: profile?.categories,
+      channels: undefined,
+      tone: undefined,
+    };
+  }
+
   // --- Content Opportunity API ---
 
   async startContentOpportunityAnalysis(domain: string, category?: string): Promise<{ task_id: string }> {

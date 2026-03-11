@@ -7,6 +7,8 @@ import { registerBrandInitCommand } from './commands/brand/init.js';
 import { registerBrandShowCommand } from './commands/brand/show.js';
 import { registerBrandListCommand } from './commands/brand/list.js';
 import { registerBrandSelectCommand } from './commands/brand/select.js';
+import { registerBrandRefreshCommand } from './commands/brand/refresh.js';
+import { registerBrandCustomizeCommand } from './commands/brand/customize.js';
 import { registerDoctorCommand } from './commands/doctor.js';
 import { AgentFactory } from './core/agent-factory.js';
 import { RemoteAgent } from './core/remote-agent.js';
@@ -45,6 +47,8 @@ registerBrandInitCommand(brandCmd);
 registerBrandShowCommand(brandCmd);
 registerBrandListCommand(brandCmd);
 registerBrandSelectCommand(brandCmd);
+registerBrandRefreshCommand(brandCmd);
+registerBrandCustomizeCommand(brandCmd);
 
 // --- Infrastructure ---
 
