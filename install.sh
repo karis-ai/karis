@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Karis CLI Installer
-# Usage: curl -fsSL https://karis.im/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/karis-ai/karis/main/install.sh | bash
 #        curl -fsSL https://raw.githubusercontent.com/karis-ai/karis/main/install.sh | bash
 
 set -e

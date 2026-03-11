@@ -9,7 +9,7 @@
 ### Quick Install (Recommended)
 
 ```bash
-curl -fsSL https://karis.im/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/karis-ai/karis/main/install.sh | bash
 ```
 
 Or install directly:
