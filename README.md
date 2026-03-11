@@ -6,8 +6,17 @@
 
 ## Installation
 
+### Quick Install (Recommended)
+
 ```bash
-npx skills add karis-ai/karis
+curl -fsSL https://karis.im/install.sh | bash
+```
+
+Or install directly:
+
+```bash
+npx karis setup
+npx karis chat
 ```
 
 ### Claude Code
