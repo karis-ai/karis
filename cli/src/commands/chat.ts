@@ -9,6 +9,7 @@ import { createUnsupportedModeError } from '../core/errors.js';
 import { isJsonLinesOutput, isJsonOutput, isTextOutput } from '../core/cli-context.js';
 import { printCommandResult } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
+import { getLastConversationId, setLastConversationId } from '../utils/config.js';
 
 const silentOutput = new Writable({
   write(_chunk, _encoding, callback) {
@@ -29,9 +30,15 @@ export function registerChatCommand(program: Command): void {
           events: Array<{ type: string; tool?: string; error?: string; content?: string }>;
         }> = [];
 
-        // Resume existing conversation if --conversation provided
+        // Resume existing conversation if --conversation provided, otherwise try last conversation
         if (options.conversation && agent instanceof RemoteAgent) {
           agent.setConversationId(options.conversation);
+        } else if (agent instanceof RemoteAgent) {
+          // Try to resume last conversation
+          const lastConversationId = await getLastConversationId();
+          if (lastConversationId) {
+            agent.setConversationId(lastConversationId);
+          }
         }
 
         const brandContext = await agent.getBrandContext();
@@ -77,6 +84,11 @@ export function registerChatCommand(program: Command): void {
         const sigintHandler = async () => {
           if (agent instanceof RemoteAgent) {
             await agent.interrupt();
+            // Save conversation ID before exiting
+            const convId = agent.getConversationId();
+            if (convId) {
+              await setLastConversationId(convId);
+            }
           }
           if (isTextOutput()) {
             console.log(chalk.dim('\n[interrupted]\n'));
@@ -120,9 +132,16 @@ export function registerChatCommand(program: Command): void {
             }
 
             if (userInput.toLowerCase() === 'exit') {
+              // Save conversation ID for next session
+              if (agent instanceof RemoteAgent) {
+                const convId = agent.getConversationId();
+                if (convId) {
+                  await setLastConversationId(convId);
+                }
+              }
               if (isTextOutput()) {
                 console.log();
-                console.log(chalk.dim('Session ended. Run `npx karis chat` to start a new conversation.'));
+                console.log(chalk.dim(`Session ended. Conversation saved. Run \`npx karis chat\` to continue.`));
                 console.log();
               }
               break;

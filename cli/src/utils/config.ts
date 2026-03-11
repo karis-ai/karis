@@ -4,10 +4,12 @@ import { homedir } from 'node:os';
 
 const KARIS_DIR = '.karis';
 const CONFIG_FILE = 'config.json';
-export const SUPPORTED_CONFIG_KEYS = ['api-key', 'base-url'] as const;
+export const SUPPORTED_CONFIG_KEYS = ['api-key', 'base-url', 'last-conversation-id'] as const;
 
 export interface KarisConfig {
   'api-key'?: string;
+  'base-url'?: string;
+  'last-conversation-id'?: string;
   [key: string]: string | undefined;
 }
 
@@ -68,6 +70,15 @@ export async function setConfigValue(key: string, value: string): Promise<void> 
 
 export async function listConfig(): Promise<KarisConfig> {
   return loadConfig();
+}
+
+export async function getLastConversationId(): Promise<string | undefined> {
+  const config = await loadConfig();
+  return config['last-conversation-id'];
+}
+
+export async function setLastConversationId(conversationId: string): Promise<void> {
+  await setConfigValue('last-conversation-id', conversationId);
 }
 
 export async function loadResolvedConfig(): Promise<ResolvedConfig> {
