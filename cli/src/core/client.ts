@@ -38,7 +38,7 @@ export interface APIKeyInfo {
   status: string;
   credit_limit: number | null;
   credits_consumed: number | null;
-  scopes: string[];
+  scopes?: string[];
   expires_at: string | null;
   created_at: string;
 }
@@ -217,6 +217,7 @@ export interface KarisClientOptions {
 export class KarisClient {
   private apiKey: string;
   private apiUrl: string;
+  private static readonly CHAT_REQUEST_TIMEOUT_MS = 30000;
 
   constructor(options: KarisClientOptions = {}) {
     this.apiKey = options.apiKey || '';
@@ -252,8 +253,38 @@ export class KarisClient {
     return body.data;
   }
 
+  async ensureConversation(): Promise<string> {
+    const response = await fetch(`${this.apiUrl}/api/v1/agent/conversation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    const body = (await response.json()) as { data?: { conversation_id?: string } };
+    const conversationId = body.data?.conversation_id;
+    if (!conversationId) {
+      throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
+    }
+    return conversationId;
+  }
+
   async *chat(message: string, options: ChatOptions = {}): AsyncGenerator<AgentEvent> {
-    const conversationId = options.conversationId ?? crypto.randomUUID();
+    const conversationId = options.conversationId;
+    if (!conversationId) {
+      throw new KarisApiError(
+        'conversationId is required. Call ensureConversation() before chat().',
+        'MISSING_CONVERSATION',
+        500,
+        EXIT_RUNTIME,
+      );
+    }
     const url = `${this.apiUrl}/api/v1/agent/convs/${conversationId}/message`;
 
     const payload: Record<string, unknown> = {
@@ -263,14 +294,28 @@ export class KarisClient {
     if (options.mode) payload.mode_hint = options.mode;
     if (options.tz) payload.tz = options.tz;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(KarisClient.CHAT_REQUEST_TIMEOUT_MS),
+      });
+    } catch (error) {
+      if (this.isTimeoutError(error)) {
+        throw new KarisApiError(
+          'Timed out waiting for the chat response. The saved conversation may be stale, or the backend may be delayed.',
+          'REQUEST_TIMEOUT',
+          504,
+          EXIT_RUNTIME,
+        );
+      }
+      throw error;
+    }
 
     if (!response.ok) {
       throw this.buildError(response.status, await this.extractMessage(response));
@@ -800,6 +845,7 @@ export class KarisClient {
   private parseEvent(eventType: string, data: Record<string, unknown>): AgentEvent {
     switch (eventType) {
       case 'text':
+      case 'text_delta':
         return { type: 'text', data: { text: data.text ?? '' } };
       case 'tool_start':
         return { type: 'tool_start', data: { tool: data.tool } };
@@ -858,6 +904,15 @@ export class KarisClient {
           EXIT_AUTH,
         );
       }
+      const missingScope = msg.match(/required scope:\s*([a-z0-9:_-]+)/i)?.[1];
+      if (missingScope) {
+        return new KarisApiError(
+          `API key is missing required scope: ${missingScope}`,
+          'MISSING_SCOPE',
+          status,
+          EXIT_AUTH,
+        );
+      }
       return new KarisApiError(
         `Access denied: ${msg || 'insufficient permissions'}`,
         'ACCESS_DENIED',
@@ -867,5 +922,9 @@ export class KarisClient {
     }
 
     return new KarisApiError(`API error ${status}: ${msg || 'unknown'}`, 'API_ERROR', status, EXIT_RUNTIME);
+  }
+
+  private isTimeoutError(error: unknown): error is Error {
+    return error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
   }
 }

@@ -15,14 +15,13 @@ export interface RemoteAgentOptions {
  */
 export class RemoteAgent implements AgentInterface {
   private client: KarisClient;
-  private conversationId: string;
+  private conversationId = '';
 
   constructor(options: RemoteAgentOptions) {
     this.client = new KarisClient({
       apiKey: options.apiKey,
       apiUrl: options.apiUrl,
     });
-    this.conversationId = crypto.randomUUID();
   }
 
   getConversationId(): string {
@@ -31,6 +30,17 @@ export class RemoteAgent implements AgentInterface {
 
   setConversationId(id: string): void {
     this.conversationId = id;
+  }
+
+  clearConversationId(): void {
+    this.conversationId = '';
+  }
+
+  async ensureConversationId(): Promise<string> {
+    if (!this.conversationId) {
+      this.conversationId = await this.client.ensureConversation();
+    }
+    return this.conversationId;
   }
 
   async isAvailable(): Promise<boolean> {
@@ -84,18 +94,7 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     }
 
     try {
-      const stream = this.client.chat(lastUserMessage.content, {
-        conversationId: this.conversationId,
-        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
-
-      for await (const event of stream) {
-        const chunk = this.mapEvent(event);
-        if (chunk) {
-          if (onChunk) onChunk(chunk);
-          yield chunk;
-        }
-      }
+      yield* this.streamWithConversationRecovery(lastUserMessage.content, onChunk);
     } catch (error) {
       const message =
         error instanceof KarisApiError
@@ -113,6 +112,9 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
    * Interrupt a running conversation (e.g. on Ctrl+C).
    */
   async interrupt(): Promise<void> {
+    if (!this.conversationId) {
+      return;
+    }
     try {
       await this.client.interrupt(this.conversationId);
     } catch {
@@ -147,5 +149,52 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
       default:
         return null;
     }
+  }
+
+  private async *streamWithConversationRecovery(
+    message: string,
+    onChunk?: (chunk: StreamChunk) => void,
+  ): AsyncGenerator<StreamChunk, void, unknown> {
+    const originalConversationId = this.conversationId;
+    const retryableConversation = Boolean(originalConversationId);
+
+    try {
+      yield* this.streamForConversation(message, onChunk);
+      return;
+    } catch (error) {
+      if (!this.shouldRetryWithFreshConversation(error, retryableConversation)) {
+        throw error;
+      }
+    }
+
+    this.clearConversationId();
+    yield* this.streamForConversation(message, onChunk);
+  }
+
+  private async *streamForConversation(
+    message: string,
+    onChunk?: (chunk: StreamChunk) => void,
+  ): AsyncGenerator<StreamChunk, void, unknown> {
+    const conversationId = await this.ensureConversationId();
+    const stream = this.client.chat(message, {
+      conversationId,
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+
+    for await (const event of stream) {
+      const chunk = this.mapEvent(event);
+      if (chunk) {
+        if (onChunk) onChunk(chunk);
+        yield chunk;
+      }
+    }
+  }
+
+  private shouldRetryWithFreshConversation(error: unknown, retryableConversation: boolean): boolean {
+    if (!(error instanceof KarisApiError) || !retryableConversation) {
+      return false;
+    }
+
+    return error.code === 'REQUEST_TIMEOUT' || error.statusCode === 404;
   }
 }

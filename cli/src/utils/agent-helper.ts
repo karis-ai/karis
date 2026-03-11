@@ -41,7 +41,7 @@ export async function executeSingleTurn(prompt: string): Promise<void> {
       prompt,
       response,
       events: chunks,
-      conversation_id: agent instanceof RemoteAgent ? agent.getConversationId() : undefined,
+      conversation_id: agent instanceof RemoteAgent ? (agent.getConversationId() || undefined) : undefined,
       mode: agent.getMode(),
     }, {
       command: getCliContext().commandPath,

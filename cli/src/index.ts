@@ -109,7 +109,7 @@ program.on('command:*', async (operands: string[]) => {
         prompt: input,
         response,
         events: chunks,
-        conversation_id: agent instanceof RemoteAgent ? agent.getConversationId() : undefined,
+        conversation_id: agent instanceof RemoteAgent ? (agent.getConversationId() || undefined) : undefined,
       }, {
         command: 'agent.run',
         meta: {

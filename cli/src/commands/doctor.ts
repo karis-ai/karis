@@ -108,7 +108,6 @@ async function checkAuth(client: KarisClient): Promise<DoctorCheck> {
       status: 'pass',
       message: `API key is valid (${info.name})`,
       details: {
-        scopes: info.scopes,
         expires_at: info.expires_at,
         key_prefix: info.key_prefix,
       },

@@ -38,6 +38,9 @@ export function registerChatCommand(program: Command): void {
           const lastConversationId = await getLastConversationId();
           if (lastConversationId) {
             agent.setConversationId(lastConversationId);
+          } else {
+            const conversationId = await agent.ensureConversationId();
+            await setLastConversationId(conversationId);
           }
         }
 
@@ -49,7 +52,7 @@ export function registerChatCommand(program: Command): void {
           console.log(chalk.bold('CMO ready.') + chalk.dim(` Mode: ${agent.getDescription()}`));
 
           if (agent instanceof RemoteAgent) {
-            console.log(chalk.dim(`Conversation: ${agent.getConversationId()}`));
+            console.log(chalk.dim(`Conversation: ${agent.getConversationId() || 'pending'}`));
           }
 
           if (brandContext) {
@@ -174,6 +177,13 @@ export function registerChatCommand(program: Command): void {
               process.exit(1);
             }
 
+            if (agent instanceof RemoteAgent) {
+              const convId = agent.getConversationId();
+              if (convId) {
+                await setLastConversationId(convId);
+              }
+            }
+
             if (fullResponse) {
               messages.push({ role: 'assistant', content: fullResponse });
             }
@@ -193,7 +203,7 @@ export function registerChatCommand(program: Command): void {
 
         if (isJsonOutput()) {
           printCommandResult({
-            conversation_id: agent instanceof RemoteAgent ? agent.getConversationId() : undefined,
+            conversation_id: agent instanceof RemoteAgent ? (agent.getConversationId() || undefined) : undefined,
             mode: agent.getMode(),
             transcript,
           });

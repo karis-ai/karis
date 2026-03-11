@@ -105,9 +105,19 @@ function nextStepsForApiCode(code: string): string[] {
         'Check the current API key credit balance or limit',
         'Retry with an API key that has available credits',
       ];
+    case 'MISSING_SCOPE':
+      return [
+        'Create or update an API key that includes the required scope for this command',
+        'For `karis chat`, verify the key includes `conversations:create`',
+      ];
     case 'NO_BRAND':
       return [
         'Run `npx karis brand init` to create a brand profile',
+      ];
+    case 'REQUEST_TIMEOUT':
+      return [
+        'Retry the command to rule out a transient backend delay',
+        'If this happens only when resuming chat, clear the saved conversation with `npx karis config set last-conversation-id ""`',
       ];
     default:
       return [];
