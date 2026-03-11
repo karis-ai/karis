@@ -13,12 +13,13 @@ export function registerBrandInitCommand(program: Command): void {
     .command('init')
     .description('Create brand profile from domain')
     .argument('[domain]', 'Domain to analyze')
-    .action(runCommand(async (domain?: string) => {
-      await runBrandInit({ domain });
+    .option('-f, --force', 'Overwrite existing brand profile without prompting')
+    .action(runCommand(async (domain?: string, options?: { force?: boolean }) => {
+      await runBrandInit({ domain, force: options?.force });
     }));
 }
 
-export async function runBrandInit(options: { domain?: string }): Promise<void> {
+export async function runBrandInit(options: { domain?: string; force?: boolean }): Promise<void> {
   const client = await KarisClient.create();
 
   if (!client.hasApiKey()) {
@@ -29,7 +30,7 @@ export async function runBrandInit(options: { domain?: string }): Promise<void> 
 
   // Check if brand already exists
   const existing = await client.getBrand();
-  if (existing) {
+  if (existing && !options.force) {
     if (isTextOutput()) {
       console.log(warning(`Brand profile already exists for ${chalk.bold(existing.name || existing.domain)}.`));
     } else {

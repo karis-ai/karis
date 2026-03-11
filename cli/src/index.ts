@@ -5,6 +5,8 @@ import { registerChatCommand } from './commands/chat.js';
 import { registerSetupCommand } from './commands/setup.js';
 import { registerBrandInitCommand } from './commands/brand/init.js';
 import { registerBrandShowCommand } from './commands/brand/show.js';
+import { registerBrandListCommand } from './commands/brand/list.js';
+import { registerBrandSelectCommand } from './commands/brand/select.js';
 import { registerDoctorCommand } from './commands/doctor.js';
 import { AgentFactory } from './core/agent-factory.js';
 import { RemoteAgent } from './core/remote-agent.js';
@@ -41,6 +43,8 @@ registerChatCommand(program);
 const brandCmd = program.command('brand').description('Manage brand profile');
 registerBrandInitCommand(brandCmd);
 registerBrandShowCommand(brandCmd);
+registerBrandListCommand(brandCmd);
+registerBrandSelectCommand(brandCmd);
 
 // --- Infrastructure ---
 
