@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import * as readline from 'node:readline/promises';
 import { Writable } from 'node:stream';
 import { stdin as input, stdout as output } from 'node:process';
+import type { AgentInterface, StreamChunk } from '../core/agent-interface.js';
 import { createAgent, renderChunk } from '../utils/agent-helper.js';
 import { RemoteAgent } from '../core/remote-agent.js';
 import { createUnsupportedModeError } from '../core/errors.js';
@@ -20,29 +21,26 @@ const silentOutput = new Writable({
 export function registerChatCommand(program: Command): void {
   program
     .command('chat')
-    .description('Talk to your CMO')
+    .description('Talk to your CMO interactively or with a single prompt')
+    .argument('[prompt...]', 'Run a single prompt instead of interactive chat')
     .option('-c, --conversation <id>', 'Continue an existing conversation')
-    .action(runCommand(async (options) => {
+    .action(runCommand(async (promptParts: string[] = [], options) => {
         const agent = await createAgent();
+        const prompt = promptParts.join(' ').trim();
+
+        if (prompt) {
+          await initializeInteractiveConversation(agent, options);
+          await runSingleTurnChat(agent, prompt, options);
+          return;
+        }
+
+        await initializeInteractiveConversation(agent, options);
+
         const transcript: Array<{
           user: string;
           assistant: string;
           events: Array<{ type: string; tool?: string; error?: string; content?: string }>;
         }> = [];
-
-        // Resume existing conversation if --conversation provided, otherwise try last conversation
-        if (options.conversation && agent instanceof RemoteAgent) {
-          agent.setConversationId(options.conversation);
-        } else if (agent instanceof RemoteAgent) {
-          // Try to resume last conversation
-          const lastConversationId = await getLastConversationId();
-          if (lastConversationId) {
-            agent.setConversationId(lastConversationId);
-          } else {
-            const conversationId = await agent.ensureConversationId();
-            await setLastConversationId(conversationId);
-          }
-        }
 
         const brandContext = await agent.getBrandContext();
         const promptOutput = isTextOutput() ? output : silentOutput;
@@ -209,4 +207,98 @@ export function registerChatCommand(program: Command): void {
           });
         }
     }));
+}
+
+async function initializeInteractiveConversation(
+  agent: AgentInterface,
+  options: { conversation?: string },
+): Promise<void> {
+  if (!(agent instanceof RemoteAgent)) {
+    return;
+  }
+
+  if (options.conversation) {
+    agent.setConversationId(options.conversation);
+    return;
+  }
+
+  const lastConversationId = await getLastConversationId();
+  if (lastConversationId) {
+    agent.setConversationId(lastConversationId);
+    return;
+  }
+
+  const conversationId = await agent.ensureConversationId();
+  await setLastConversationId(conversationId);
+}
+
+async function runSingleTurnChat(
+  agent: AgentInterface,
+  prompt: string,
+  options: { conversation?: string },
+): Promise<void> {
+  const brandContext = await agent.getBrandContext();
+  const messages = brandContext ? [brandContext] : [];
+  messages.push({ role: 'user', content: prompt });
+
+  if (isTextOutput()) {
+    console.log();
+    console.log(chalk.bold('CMO') + chalk.dim(` (${agent.getDescription()}) — "${prompt}"`));
+    console.log();
+  }
+
+  const chunks: StreamChunk[] = [];
+  let response = '';
+
+  const sigintHandler = async () => {
+    if (agent instanceof RemoteAgent && options.conversation) {
+      await agent.interrupt();
+      const convId = agent.getConversationId();
+      if (convId) {
+        await setLastConversationId(convId);
+      }
+    }
+    if (isTextOutput()) {
+      console.log(chalk.dim('\n[interrupted]\n'));
+    }
+    process.exit(0);
+  };
+  process.on('SIGINT', sigintHandler);
+
+  try {
+    for await (const chunk of agent.streamChat(messages)) {
+      renderChunk(chunk);
+      chunks.push(chunk);
+
+      if (chunk.type === 'content' && chunk.content) {
+        response += chunk.content;
+      }
+      if (chunk.type === 'error') {
+        process.exit(1);
+      }
+    }
+  } finally {
+    process.removeListener('SIGINT', sigintHandler);
+  }
+
+  if (agent instanceof RemoteAgent && options.conversation) {
+    const convId = agent.getConversationId();
+    if (convId) {
+      await setLastConversationId(convId);
+    }
+  }
+
+  if (isJsonOutput()) {
+    printCommandResult({
+      prompt,
+      response,
+      events: chunks,
+      conversation_id: agent instanceof RemoteAgent ? (agent.getConversationId() || undefined) : undefined,
+      mode: agent.getMode(),
+    }, {
+      meta: {
+        runtime: agent.getDescription(),
+      },
+    });
+  }
 }

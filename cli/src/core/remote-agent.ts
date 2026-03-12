@@ -145,6 +145,9 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
       case 'done':
         return { type: 'done' };
       case 'error':
+        if (event.data?.recoverable === true) {
+          return null;
+        }
         return { type: 'error', error: String(event.data?.message ?? 'Unknown error') };
       default:
         return null;

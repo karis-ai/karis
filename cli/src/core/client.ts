@@ -852,7 +852,7 @@ export class KarisClient {
       case 'tool_end':
         return { type: 'tool_end', data: { tool: data.tool, result: data.result_summary } };
       case 'error':
-        return { type: 'error', data: { message: data.message } };
+        return { type: 'error', data: { message: data.message, recoverable: data.recoverable } };
       default:
         return { type: 'text', data: { text: '' } };
     }
