@@ -140,12 +140,17 @@ function renderTextChunk(chunk: StreamChunk): void {
     case 'content':
       if (chunk.content) process.stdout.write(chunk.content);
       break;
-    case 'tool_start':
-      process.stdout.write(chalk.yellow(`\n  [tool] ${chunk.tool ?? 'unknown'}...`));
+    case 'tool_start': {
+      const toolName = chunk.tool ?? 'unknown';
+      const hint = formatToolHint(toolName, chunk.title, chunk.args);
+      process.stdout.write(chalk.yellow(`\n  [tool] ${toolName}`) + (hint ? chalk.dim(` ${hint}`) : '') + chalk.yellow('...'));
       break;
-    case 'tool_end':
-      process.stdout.write(chalk.green(' done\n'));
+    }
+    case 'tool_end': {
+      const suffix = chunk.latency_ms != null ? chalk.dim(` ${formatLatency(chunk.latency_ms)}`) : '';
+      process.stdout.write(chalk.green(' done') + suffix + '\n');
       break;
+    }
     case 'done':
       console.log('\n');
       break;
@@ -184,4 +189,41 @@ export function printInfoLine(text: string): void {
     return;
   }
   console.log(text);
+}
+
+function formatToolHint(
+  toolName: string,
+  title?: string,
+  args?: Record<string, unknown>,
+): string {
+  if (title) return `"${truncate(title, 60)}"`;
+  if (!args || Object.keys(args).length === 0) return '';
+
+  const key = pickArgKey(toolName, args);
+  if (!key) return '';
+  const val = args[key];
+  if (typeof val === 'string' && val.length > 0) return `"${truncate(val, 60)}"`;
+  return '';
+}
+
+function pickArgKey(
+  toolName: string,
+  args: Record<string, unknown>,
+): string | undefined {
+  const preferred = ['query', 'url', 'subreddit', 'username', 'keyword', 'search_query', 'topic'];
+  for (const k of preferred) {
+    if (k in args) return k;
+  }
+  const keys = Object.keys(args);
+  return keys.length > 0 ? keys[0] : undefined;
+}
+
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1) + '…';
+}
+
+function formatLatency(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
 }

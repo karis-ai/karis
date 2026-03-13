@@ -134,13 +134,21 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     switch (event.type) {
       case 'text':
         return { type: 'content', content: String(event.data?.text ?? '') };
-      case 'tool_start':
-        return { type: 'tool_start', tool: String(event.data?.tool ?? 'unknown') };
+      case 'tool_start': {
+        const args = event.data?.args as Record<string, unknown> | undefined;
+        return {
+          type: 'tool_start',
+          tool: String(event.data?.tool ?? 'unknown'),
+          title: event.data?.title ? String(event.data.title) : undefined,
+          args,
+        };
+      }
       case 'tool_end':
         return {
           type: 'tool_end',
           tool: String(event.data?.tool ?? 'unknown'),
           result: String(event.data?.result ?? ''),
+          latency_ms: typeof event.data?.latency_ms === 'number' ? event.data.latency_ms : undefined,
         };
       case 'done':
         return { type: 'done' };

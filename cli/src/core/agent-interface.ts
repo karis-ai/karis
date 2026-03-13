@@ -11,7 +11,10 @@ export interface StreamChunk {
   type: 'content' | 'tool_start' | 'tool_end' | 'error' | 'done';
   content?: string;
   tool?: string;
+  title?: string;
+  args?: Record<string, unknown>;
   result?: string;
+  latency_ms?: number;
   error?: string;
 }
 
