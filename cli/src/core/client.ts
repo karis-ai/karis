@@ -217,7 +217,7 @@ export interface KarisClientOptions {
 export class KarisClient {
   private apiKey: string;
   private apiUrl: string;
-  private static readonly CHAT_REQUEST_TIMEOUT_MS = 30000;
+  private static readonly CHAT_CONNECT_TIMEOUT_MS = 30000;
 
   constructor(options: KarisClientOptions = {}) {
     this.apiKey = options.apiKey || '';
@@ -294,6 +294,12 @@ export class KarisClient {
     if (options.mode) payload.mode_hint = options.mode;
     if (options.tz) payload.tz = options.tz;
 
+    const connectController = new AbortController();
+    const connectTimer = setTimeout(
+      () => connectController.abort(),
+      KarisClient.CHAT_CONNECT_TIMEOUT_MS,
+    );
+
     let response: Response;
     try {
       response = await fetch(url, {
@@ -303,9 +309,11 @@ export class KarisClient {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(KarisClient.CHAT_REQUEST_TIMEOUT_MS),
+        signal: connectController.signal,
       });
+      clearTimeout(connectTimer);
     } catch (error) {
+      clearTimeout(connectTimer);
       if (this.isTimeoutError(error)) {
         throw new KarisApiError(
           'Timed out waiting for the chat response. The saved conversation may be stale, or the backend may be delayed.',
@@ -848,9 +856,9 @@ export class KarisClient {
       case 'text_delta':
         return { type: 'text', data: { text: data.text ?? '' } };
       case 'tool_start':
-        return { type: 'tool_start', data: { tool: data.tool } };
+        return { type: 'tool_start', data: { tool: data.tool, title: data.title, args: data.args } };
       case 'tool_end':
-        return { type: 'tool_end', data: { tool: data.tool, result: data.result_summary } };
+        return { type: 'tool_end', data: { tool: data.tool, result: data.result_summary, latency_ms: data.latency_ms } };
       case 'error':
         return { type: 'error', data: { message: data.message, recoverable: data.recoverable } };
       default:
