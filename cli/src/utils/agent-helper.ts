@@ -1,8 +1,8 @@
 import { AgentFactory } from '../core/agent-factory.js';
 import type { AgentInterface, StreamChunk } from '../core/agent-interface.js';
 import { createAuthRequiredError } from '../core/errors.js';
-import { getCliContext, isJsonOutput } from '../core/cli-context.js';
-import { printCommandResult, renderStreamChunk } from './output.js';
+import { getCliContext, isJsonOutput, isYamlOutput } from '../core/cli-context.js';
+import { printCommandResult, renderStreamChunk, resetToolCallCounter } from './output.js';
 import { RemoteAgent } from '../core/remote-agent.js';
 
 /**
@@ -26,6 +26,7 @@ export async function executeSingleTurn(prompt: string): Promise<void> {
   const chunks: StreamChunk[] = [];
   let response = '';
 
+  resetToolCallCounter();
   for await (const chunk of agent.streamChat([
     { role: 'user', content: prompt }
   ])) {
@@ -36,7 +37,7 @@ export async function executeSingleTurn(prompt: string): Promise<void> {
     renderChunk(chunk);
   }
 
-  if (isJsonOutput()) {
+  if (isJsonOutput() || isYamlOutput()) {
     printCommandResult({
       prompt,
       response,

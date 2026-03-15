@@ -1,7 +1,9 @@
 import chalk from 'chalk';
-import { getCliContext, isJsonLinesOutput, isStructuredOutput, isTextOutput } from '../core/cli-context.js';
+import { getCliContext, isCompactOutput, isJsonLinesOutput, isStructuredOutput, isTextOutput, isYamlOutput } from '../core/cli-context.js';
 import { CliError, normalizeError } from '../core/errors.js';
 import type { StreamChunk } from '../core/agent-interface.js';
+
+const SCHEMA_VERSION = '1';
 
 export function heading(text: string): string {
   return chalk.bold.cyan(text);
@@ -41,6 +43,7 @@ export function hookMessage(text: string): void {
 
 export interface CommandSuccessEnvelope {
   ok: true;
+  schema_version: string;
   command?: string;
   data: unknown;
   meta?: Record<string, unknown>;
@@ -48,6 +51,7 @@ export interface CommandSuccessEnvelope {
 
 export interface CommandErrorEnvelope {
   ok: false;
+  schema_version: string;
   command?: string;
   error: {
     code: string;
@@ -71,6 +75,7 @@ export function printCommandResult(
 
   const payload: CommandSuccessEnvelope = {
     ok: true,
+    schema_version: SCHEMA_VERSION,
     command: meta.command ?? getCliContext().commandPath,
     data,
     meta: meta.meta,
@@ -92,6 +97,7 @@ export function printCommandError(
   } else {
     const payload: CommandErrorEnvelope = {
       ok: false,
+      schema_version: SCHEMA_VERSION,
       command: meta.command ?? getCliContext().commandPath,
       error: {
         code: cliError.code,
@@ -107,19 +113,33 @@ export function printCommandError(
   process.exit(cliError.exitCode);
 }
 
+// --- Numbered tool-call progress (Feature 4) ---
+
+let toolCallCounter = 0;
+
+export function resetToolCallCounter(): void {
+  toolCallCounter = 0;
+}
+
 export function renderStreamChunk(chunk: StreamChunk): void {
   if (isTextOutput()) {
     renderTextChunk(chunk);
     return;
   }
 
-  const event = {
+  const event: Record<string, unknown> = {
+    schema_version: SCHEMA_VERSION,
     command: getCliContext().commandPath,
     ...chunk,
   };
 
+  if (chunk.type === 'tool_start') {
+    ++toolCallCounter;
+    event.step = toolCallCounter;
+  }
+
   if (isJsonLinesOutput()) {
-    process.stdout.write(`${JSON.stringify(event)}\n`);
+    process.stdout.write(`${JSON.stringify(compactify(event))}\n`);
     return;
   }
 }
@@ -129,10 +149,11 @@ export function emitStructuredEvent(event: Record<string, unknown>): void {
     return;
   }
 
-  process.stdout.write(`${JSON.stringify({
+  process.stdout.write(`${JSON.stringify(compactify({
+    schema_version: SCHEMA_VERSION,
     command: getCliContext().commandPath,
     ...event,
-  })}\n`);
+  }))}\n`);
 }
 
 function renderTextChunk(chunk: StreamChunk): void {
@@ -141,9 +162,10 @@ function renderTextChunk(chunk: StreamChunk): void {
       if (chunk.content) process.stdout.write(chunk.content);
       break;
     case 'tool_start': {
+      ++toolCallCounter;
       const toolName = chunk.tool ?? 'unknown';
       const hint = formatToolHint(toolName, chunk.title, chunk.args);
-      process.stdout.write(chalk.yellow(`\n  [tool] ${toolName}`) + (hint ? chalk.dim(` ${hint}`) : '') + chalk.yellow('...'));
+      process.stdout.write(chalk.yellow(`\n  [${toolCallCounter}] ${toolName}`) + (hint ? chalk.dim(` ${hint}`) : '') + chalk.yellow('...'));
       break;
     }
     case 'tool_end': {
@@ -161,12 +183,87 @@ function renderTextChunk(chunk: StreamChunk): void {
 }
 
 function printStructured(payload: CommandSuccessEnvelope | CommandErrorEnvelope | Record<string, unknown>): void {
+  const out = compactify(payload);
+
   if (isJsonLinesOutput()) {
-    process.stdout.write(`${JSON.stringify(payload)}\n`);
+    process.stdout.write(`${JSON.stringify(out)}\n`);
     return;
   }
 
-  console.log(JSON.stringify(payload, null, 2));
+  if (isYamlOutput()) {
+    process.stdout.write(formatYaml(out));
+    return;
+  }
+
+  console.log(JSON.stringify(out, null, 2));
+}
+
+// --- Compact mode (Feature 3) ---
+
+const COMPACT_STRIP_KEYS = new Set(['meta', 'command', 'latency_ms', 'args', 'next_steps']);
+
+function compactify<T>(obj: T): T {
+  if (!isCompactOutput()) return obj;
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(compactify) as T;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    if (COMPACT_STRIP_KEYS.has(key)) continue;
+    result[key] = compactify(value);
+  }
+  return result as T;
+}
+
+// --- YAML serialization (Feature 1) ---
+
+function formatYaml(value: unknown, indent = 0): string {
+  const pad = '  '.repeat(indent);
+
+  if (value === null || value === undefined) return `${pad}null\n`;
+  if (typeof value === 'boolean') return `${pad}${value}\n`;
+  if (typeof value === 'number') return `${pad}${value}\n`;
+
+  if (typeof value === 'string') {
+    if (value.includes('\n')) {
+      const lines = value.split('\n');
+      return `${pad}|\n${lines.map(l => `${pad}  ${l}`).join('\n')}\n`;
+    }
+    if (/[:#{}[\],&*?|>!'"%@`]/.test(value) || value === '' || value === 'true' || value === 'false' || value === 'null' || !isNaN(Number(value))) {
+      return `${pad}"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"\n`;
+    }
+    return `${pad}${value}\n`;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return `${pad}[]\n`;
+    let out = '';
+    for (const item of value) {
+      if (item !== null && typeof item === 'object') {
+        out += `${pad}-\n${formatYaml(item, indent + 1)}`;
+      } else {
+        out += `${pad}- ${formatYaml(item, 0).trimStart()}`;
+      }
+    }
+    return out;
+  }
+
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (entries.length === 0) return `${pad}{}\n`;
+    let out = '';
+    for (const [key, val] of entries) {
+      if (val === undefined) continue;
+      if (val !== null && typeof val === 'object') {
+        out += `${pad}${key}:\n${formatYaml(val, indent + 1)}`;
+      } else {
+        out += `${pad}${key}: ${formatYaml(val, 0).trimStart()}`;
+      }
+    }
+    return out;
+  }
+
+  return `${pad}${String(value)}\n`;
 }
 
 function printHumanError(error: CliError): void {

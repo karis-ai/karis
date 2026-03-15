@@ -7,8 +7,8 @@ import type { AgentInterface, StreamChunk } from '../core/agent-interface.js';
 import { createAgent, renderChunk } from '../utils/agent-helper.js';
 import { RemoteAgent } from '../core/remote-agent.js';
 import { createUnsupportedModeError } from '../core/errors.js';
-import { isJsonLinesOutput, isJsonOutput, isTextOutput } from '../core/cli-context.js';
-import { printCommandResult } from '../utils/output.js';
+import { isJsonLinesOutput, isJsonOutput, isTextOutput, isYamlOutput } from '../core/cli-context.js';
+import { printCommandResult, resetToolCallCounter } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
 import { getLastConversationId, setLastConversationId } from '../utils/config.js';
 
@@ -65,7 +65,7 @@ export function registerChatCommand(program: Command): void {
           console.log(chalk.dim('Type your message or "exit" to quit.\n'));
         }
 
-        if (isJsonOutput() && process.stdin.isTTY) {
+        if ((isJsonOutput() || isYamlOutput()) && process.stdin.isTTY) {
           throw createUnsupportedModeError('`karis chat --json` does not support interactive TTY sessions.', [
             'For interactive use, run `npx karis chat`',
             'For automation, consume stream events with `npx karis --jsonl chat`',
@@ -158,6 +158,7 @@ export function registerChatCommand(program: Command): void {
             let hasError = false;
             const events: Array<{ type: string; tool?: string; error?: string; content?: string }> = [];
 
+            resetToolCallCounter();
             for await (const chunk of agent.streamChat(messages)) {
               renderChunk(chunk);
               events.push(chunk);
@@ -186,7 +187,7 @@ export function registerChatCommand(program: Command): void {
               messages.push({ role: 'assistant', content: fullResponse });
             }
 
-            if (isJsonOutput() || isJsonLinesOutput()) {
+            if (isJsonOutput() || isJsonLinesOutput() || isYamlOutput()) {
               transcript.push({
                 user: userInput,
                 assistant: fullResponse,
@@ -199,7 +200,7 @@ export function registerChatCommand(program: Command): void {
           rl.close();
         }
 
-        if (isJsonOutput()) {
+        if (isJsonOutput() || isYamlOutput()) {
           printCommandResult({
             conversation_id: agent instanceof RemoteAgent ? (agent.getConversationId() || undefined) : undefined,
             mode: agent.getMode(),
@@ -243,8 +244,6 @@ async function runSingleTurnChat(
 
   if (isTextOutput()) {
     console.log();
-    console.log(chalk.bold('CMO') + chalk.dim(` (${agent.getDescription()}) — "${prompt}"`));
-    console.log();
   }
 
   const chunks: StreamChunk[] = [];
@@ -266,6 +265,7 @@ async function runSingleTurnChat(
   process.on('SIGINT', sigintHandler);
 
   try {
+    resetToolCallCounter();
     for await (const chunk of agent.streamChat(messages)) {
       renderChunk(chunk);
       chunks.push(chunk);
@@ -288,7 +288,7 @@ async function runSingleTurnChat(
     }
   }
 
-  if (isJsonOutput()) {
+  if (isJsonOutput() || isYamlOutput()) {
     printCommandResult({
       prompt,
       response,

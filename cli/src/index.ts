@@ -10,11 +10,12 @@ import { registerBrandSelectCommand } from './commands/brand/select.js';
 import { registerBrandRefreshCommand } from './commands/brand/refresh.js';
 import { registerBrandCustomizeCommand } from './commands/brand/customize.js';
 import { registerDoctorCommand } from './commands/doctor.js';
+import { registerShowCommand } from './commands/show.js';
 import { AgentFactory } from './core/agent-factory.js';
 import { RemoteAgent } from './core/remote-agent.js';
 import type { StreamChunk } from './core/agent-interface.js';
-import { isJsonOutput, isTextOutput, setCliContext, updateCliContext } from './core/cli-context.js';
-import { printCommandError, printCommandResult, renderStreamChunk } from './utils/output.js';
+import { isJsonOutput, isTextOutput, isYamlOutput, setCliContext } from './core/cli-context.js';
+import { printCommandError, printCommandResult, renderStreamChunk, resetToolCallCounter } from './utils/output.js';
 import { createAuthRequiredError } from './core/errors.js';
 
 const program = new Command();
@@ -24,14 +25,40 @@ program
   .version('0.1.0')
   .description('Your AI-powered CMO')
   .option('--json', 'Emit structured JSON output')
-  .option('--jsonl', 'Emit newline-delimited JSON events');
+  .option('--jsonl', 'Emit newline-delimited JSON events')
+  .option('--yaml', 'Emit YAML output')
+  .option('--compact', 'Strip meta fields from structured output');
 
 program.hook('preAction', (_thisCommand, actionCommand) => {
   const globalOptions = actionCommand.optsWithGlobals();
-  const outputMode = globalOptions.jsonl ? 'jsonl' : globalOptions.json ? 'json' : 'text';
+
+  // Output mode priority: flags > OUTPUT env > TTY auto-detection
+  let outputMode: 'text' | 'json' | 'jsonl' | 'yaml';
+  if (globalOptions.jsonl) {
+    outputMode = 'jsonl';
+  } else if (globalOptions.json) {
+    outputMode = 'json';
+  } else if (globalOptions.yaml) {
+    outputMode = 'yaml';
+  } else {
+    const envOutput = process.env.OUTPUT?.toLowerCase();
+    if (envOutput === 'json') {
+      outputMode = 'json';
+    } else if (envOutput === 'jsonl') {
+      outputMode = 'jsonl';
+    } else if (envOutput === 'yaml') {
+      outputMode = 'yaml';
+    } else if (!process.stdout.isTTY) {
+      outputMode = 'yaml';
+    } else {
+      outputMode = 'text';
+    }
+  }
+
   setCliContext({
     outputMode,
     commandPath: commandPathFor(actionCommand),
+    compact: globalOptions.compact === true,
   });
 });
 
@@ -54,13 +81,41 @@ registerBrandCustomizeCommand(brandCmd);
 
 registerConfigCommand(program);
 registerDoctorCommand(program);
+registerShowCommand(program);
 
 // --- Natural language fallback ---
 
 program.on('command:*', async (operands: string[]) => {
   const input = operands.join(' ');
-  updateCliContext({
+
+  // Apply same output mode detection for fallback handler (no preAction hook)
+  const globalOptions = program.opts();
+  let outputMode: 'text' | 'json' | 'jsonl' | 'yaml';
+  if (globalOptions.jsonl) {
+    outputMode = 'jsonl';
+  } else if (globalOptions.json) {
+    outputMode = 'json';
+  } else if (globalOptions.yaml) {
+    outputMode = 'yaml';
+  } else {
+    const envOutput = process.env.OUTPUT?.toLowerCase();
+    if (envOutput === 'json') {
+      outputMode = 'json';
+    } else if (envOutput === 'jsonl') {
+      outputMode = 'jsonl';
+    } else if (envOutput === 'yaml') {
+      outputMode = 'yaml';
+    } else if (!process.stdout.isTTY) {
+      outputMode = 'yaml';
+    } else {
+      outputMode = 'text';
+    }
+  }
+
+  setCliContext({
+    outputMode,
     commandPath: 'agent.run',
+    compact: globalOptions.compact === true,
   });
 
   const agent = await AgentFactory.create();
@@ -72,8 +127,6 @@ program.on('command:*', async (operands: string[]) => {
   const brandContext = await agent.getBrandContext();
 
   if (isTextOutput()) {
-    console.log();
-    console.log(chalk.bold('CMO') + chalk.dim(` (${agent.getDescription()}) — "${input}"`));
     console.log();
   }
 
@@ -93,6 +146,7 @@ program.on('command:*', async (operands: string[]) => {
   process.on('SIGINT', sigintHandler);
 
   try {
+    resetToolCallCounter();
     for await (const chunk of agent.streamChat(messages)) {
       chunks.push(chunk);
       if (chunk.type === 'content' && chunk.content) {
@@ -104,7 +158,7 @@ program.on('command:*', async (operands: string[]) => {
       }
     }
 
-    if (isJsonOutput()) {
+    if (isJsonOutput() || isYamlOutput()) {
       printCommandResult({
         prompt: input,
         response,
