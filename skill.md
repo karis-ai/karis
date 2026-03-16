@@ -497,10 +497,17 @@ curl -X POST https://api.karis.im/api/v1/agent/convs/<conversation_id>/interrupt
 |-------|------|-------------|
 | `text` / `text_delta` | `{"text":"..."}` | Content chunk |
 | `tool_start` | `{"tool":"web_search","title":"...","args":{}}` | Tool execution started |
+| `tool_delta` | `{"tool":"web_search","text":"...","progress_percent":50}` | Tool execution progress (incremental) |
 | `tool_end` | `{"tool":"web_search","latency_ms":1900}` | Tool execution complete |
-| `done` | `{}` | Stream finished |
-| `error` | `{"message":"...","recoverable":false}` | Error occurred |
+| `working_summary` | `{"text":"Analyzing brand..."}` | Agent progress summary |
+| `output_artifact` | `{"artifact_id":"...","items":[...]}` | File or structured output produced |
+| `hitl_request` | `{"hitl_id":"...","type":"confirm","prompt":"..."}` | Human-in-the-loop input needed |
+| `final_result` | `{"value":{...},"schema_name":"...","text_fallback":"..."}` | Structured final result |
+| `done` | `{"elapsed_ms":12500,"input_tokens":1200,"output_tokens":3400}` | Stream finished |
+| `error` | `{"message":"...","code":"AGENT_ERROR","recoverable":false}` | Error occurred |
 | `heartbeat` | — | Keep-alive (ignore) |
+
+All events include `run_id`, `message_id`, and `timestamp` fields for traceability.
 
 ### API Key Info
 
@@ -526,6 +533,7 @@ Returns: `id`, `name`, `key_prefix`, `status`, `credit_limit`, `credits_consumed
 | `ACCESS_DENIED` | 403 | Insufficient permissions |
 | `NO_BRAND` | 404 | No brand profile — run `npx karis brand init` |
 | `NOT_FOUND` | 404 | Resource not found |
+| `AGENT_ERROR` | 500 | Agent execution failed — retry or rephrase |
 | `REQUEST_TIMEOUT` | 504 | Backend timed out |
 
 ---
