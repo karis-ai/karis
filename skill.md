@@ -141,7 +141,6 @@ Environment variables supported:
 | Variable | Description |
 |----------|-------------|
 | `KARIS_API_KEY` | API key (overrides config file) |
-| `KARIS_API_URL` | Custom API base URL |
 
 ---
 
