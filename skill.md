@@ -554,54 +554,21 @@ npx karis config set base-url https://api.karis.im
 npx karis config list
 ```
 
-### Index Cache
-
-List commands (e.g. `npx karis brand list`) save a short index. Reference items by number:
-
-```bash
-npx karis brand list
-# → [1] Amplift (amplift.ai)
-# → [2] Actionbook (actionbook.dev)
-# → [3] BayesLab (bayeslab.ai)
-
-npx karis show 1
-# → Full details for Amplift
-```
+List commands save a short index — reference items by number: `npx karis show 1`.
 
 ---
 
 ## Quick Reference
 
 ```bash
-# Setup
 npx karis setup                  # First-time wizard
-npx karis doctor                 # Verify environment
-
-# Chat
-npx karis chat                   # Interactive CMO session
 npx karis chat "your prompt"     # Single-turn query
 npx karis chat -c <id>           # Continue conversation
-
-# Brand
 npx karis brand init <domain>    # Create brand profile
-npx karis brand show             # View profile
-npx karis brand list             # List all brands
-npx karis brand select <name>    # Switch active brand
-npx karis brand customize        # Edit profile fields
-npx karis brand refresh          # Re-fetch from source
-
-# Config
-npx karis config list            # Show all config
-npx karis config set <key> <val> # Set config value
-
-# Output
-npx karis --json <command>       # JSON output
-npx karis --yaml <command>       # YAML output
-npx karis --jsonl <command>      # JSONL streaming
-npx karis --compact <command>    # Strip meta fields
-
-# Index
-npx karis show <n>               # Show item from last list
+npx karis brand show             # View current profile
+npx karis --json <command>       # Structured JSON output
+npx karis --jsonl chat "..."     # JSONL streaming
+npx karis doctor                 # Verify environment
 ```
 
 ---
