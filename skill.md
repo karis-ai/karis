@@ -502,24 +502,6 @@ curl -X POST https://api.karis.im/api/v1/agent/convs/<conversation_id>/interrupt
 | `error` | `{"message":"...","recoverable":false}` | Error occurred |
 | `heartbeat` | — | Keep-alive (ignore) |
 
-### Content Opportunity Analysis
-
-```bash
-# Start analysis
-curl -X POST https://api.karis.im/api/v1/content-opportunity/analyze \
-  -H "Authorization: Bearer $KARIS_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"domain":"mybrand.com"}'
-
-# Check task status
-curl https://api.karis.im/api/v1/content-opportunity/tasks/<task_id> \
-  -H "Authorization: Bearer $KARIS_API_KEY"
-
-# Get results
-curl https://api.karis.im/api/v1/content-opportunity/tasks/<task_id>/result \
-  -H "Authorization: Bearer $KARIS_API_KEY"
-```
-
 ### API Key Info
 
 ```bash
