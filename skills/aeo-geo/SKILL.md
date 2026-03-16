@@ -81,7 +81,7 @@ npx karis brand init <domain>
 ### Step 2: Execute Visibility Audit
 
 ```bash
-npx karis chat "Run a GEO visibility audit for my brand. Include:
+npx karis chat --skill aeo-geo "Run a GEO visibility audit for my brand. Include:
 - Answer Share (% of AI responses mentioning my brand)
 - Citation Rate (% citing my website)
 - Mention Position (where I appear in responses)
@@ -136,7 +136,7 @@ npx karis brand show
 ### Step 2: Execute Site Audit
 
 ```bash
-npx karis chat "Run a GEO site audit for [domain]. Analyze:
+npx karis chat --skill aeo-geo "Run a GEO site audit for [domain]. Analyze:
 - AI crawler accessibility (robots.txt, llms.txt, sitemap)
 - Content structure (headings, depth, scannability)
 - Semantic relevance (keyword coverage, topical depth)
@@ -205,7 +205,7 @@ npx karis brand show
 ### Step 2: Execute Content Strategy Analysis
 
 ```bash
-npx karis chat "Analyze content strategy for [domain] for AI search optimization. Include:
+npx karis chat --skill aeo-geo "Analyze content strategy for [domain] for AI search optimization. Include:
 - Map all major content (product, blog, docs, case studies)
 - Identify 3-7 topic clusters with primary keywords
 - For each cluster: existing content, content gaps, AI citation potential
@@ -252,7 +252,7 @@ npx karis chat "Analyze content strategy for [domain] for AI search optimization
 Run all three audits together:
 
 ```bash
-npx karis chat "Run a full GEO audit for [brand/domain]. Include:
+npx karis chat --skill aeo-geo "Run a full GEO audit for [brand/domain]. Include:
 1. Visibility audit — Am I being mentioned by AI search engines?
 2. Site audit — Is my website optimized for AI engines?
 3. Content strategy — What content should I create?

@@ -24,6 +24,7 @@ export function registerChatCommand(program: Command): void {
     .description('Talk to your CMO interactively or with a single prompt')
     .argument('[prompt...]', 'Run a single prompt instead of interactive chat')
     .option('-c, --conversation <id>', 'Continue an existing conversation')
+    .option('--skill <name>', 'Hint which skill to use, e.g. aeo-geo, reddit-listening')
     .action(runCommand(async (promptParts: string[] = [], options) => {
         const agent = await createAgent();
         const prompt = promptParts.join(' ').trim();
@@ -35,7 +36,6 @@ export function registerChatCommand(program: Command): void {
         }
 
         await initializeInteractiveConversation(agent, options);
-
         const transcript: Array<{
           user: string;
           assistant: string;
@@ -159,7 +159,7 @@ export function registerChatCommand(program: Command): void {
             const events: Array<{ type: string; tool?: string; error?: string; content?: string }> = [];
 
             resetToolCallCounter();
-            for await (const chunk of agent.streamChat(messages)) {
+            for await (const chunk of agent.streamChat(messages, undefined, options.skill)) {
               renderChunk(chunk);
               events.push(chunk);
 
@@ -236,7 +236,7 @@ async function initializeInteractiveConversation(
 async function runSingleTurnChat(
   agent: AgentInterface,
   prompt: string,
-  options: { conversation?: string },
+  options: { conversation?: string; skill?: string },
 ): Promise<void> {
   const brandContext = await agent.getBrandContext();
   const messages = brandContext ? [brandContext] : [];
@@ -266,7 +266,7 @@ async function runSingleTurnChat(
 
   try {
     resetToolCallCounter();
-    for await (const chunk of agent.streamChat(messages)) {
+    for await (const chunk of agent.streamChat(messages, undefined, options.skill)) {
       renderChunk(chunk);
       chunks.push(chunk);
 

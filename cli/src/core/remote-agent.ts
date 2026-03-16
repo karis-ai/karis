@@ -74,6 +74,7 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
   async *streamChat(
     messages: ChatMessage[],
     onChunk?: (chunk: StreamChunk) => void,
+    skillHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     if (!(await this.isAvailable())) {
       const chunk: StreamChunk = {
@@ -94,7 +95,7 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     }
 
     try {
-      yield* this.streamWithConversationRecovery(lastUserMessage.content, onChunk);
+      yield* this.streamWithConversationRecovery(lastUserMessage.content, onChunk, skillHint);
     } catch (error) {
       const message =
         error instanceof KarisApiError
@@ -165,12 +166,13 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
   private async *streamWithConversationRecovery(
     message: string,
     onChunk?: (chunk: StreamChunk) => void,
+    skillHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     const originalConversationId = this.conversationId;
     const retryableConversation = Boolean(originalConversationId);
 
     try {
-      yield* this.streamForConversation(message, onChunk);
+      yield* this.streamForConversation(message, onChunk, skillHint);
       return;
     } catch (error) {
       if (!this.shouldRetryWithFreshConversation(error, retryableConversation)) {
@@ -179,16 +181,18 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     }
 
     this.clearConversationId();
-    yield* this.streamForConversation(message, onChunk);
+    yield* this.streamForConversation(message, onChunk, skillHint);
   }
 
   private async *streamForConversation(
     message: string,
     onChunk?: (chunk: StreamChunk) => void,
+    skillHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     const conversationId = await this.ensureConversationId();
     const stream = this.client.chat(message, {
       conversationId,
+      skillHint,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
 

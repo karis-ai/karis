@@ -247,7 +247,7 @@ This is often the **highest-conversion path** — you're already in his notifica
 For deeper content optimization, use Karis CLI:
 
 ```bash
-npx karis chat "Write a viral X/Twitter launch tweet for [product]. Context:
+npx karis chat --skill elonmusk-repost "Write a viral X/Twitter launch tweet for [product]. Context:
 - Product: [description]
 - Target: Elon Musk repost
 - Include: hook, wow factor, demo description

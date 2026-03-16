@@ -75,7 +75,7 @@ npx karis brand init <domain>
 
 **Brand Sentiment Analysis:**
 ```bash
-npx karis chat "Analyze Reddit sentiment for [brand]. Include:
+npx karis chat --skill reddit-listening "Analyze Reddit sentiment for [brand]. Include:
 - Overall sentiment (positive/negative/neutral) with percentage breakdown
 - Top mentioned topics with mention counts
 - Common pain points (direct quotes from users)
@@ -85,7 +85,7 @@ npx karis chat "Analyze Reddit sentiment for [brand]. Include:
 
 **Competitor Comparison:**
 ```bash
-npx karis chat "Compare [brand_a] vs [brand_b] on Reddit. Include:
+npx karis chat --skill reddit-listening "Compare [brand_a] vs [brand_b] on Reddit. Include:
 - Mention volume comparison (with counts)
 - Sentiment comparison (side-by-side)
 - Feature comparisons from actual user discussions
@@ -95,7 +95,7 @@ npx karis chat "Compare [brand_a] vs [brand_b] on Reddit. Include:
 
 **Subreddit Discovery:**
 ```bash
-npx karis chat "Find Reddit communities discussing [topic]. Include:
+npx karis chat --skill reddit-listening "Find Reddit communities discussing [topic]. Include:
 - Relevant subreddits with member counts and activity levels
 - Content themes in each community
 - Posting guidelines and restrictions
@@ -105,7 +105,7 @@ npx karis chat "Find Reddit communities discussing [topic]. Include:
 
 **Complaint Tracking:**
 ```bash
-npx karis chat "Track complaints about [brand] on Reddit. Include:
+npx karis chat --skill reddit-listening "Track complaints about [brand] on Reddit. Include:
 - Common complaint themes with frequency
 - Severity assessment (critical/moderate/minor)
 - Affected user segments
@@ -115,7 +115,7 @@ npx karis chat "Track complaints about [brand] on Reddit. Include:
 
 **Audience Analysis:**
 ```bash
-npx karis chat "Analyze Reddit audience for [brand]. Include:
+npx karis chat --skill reddit-listening "Analyze Reddit audience for [brand]. Include:
 - Who's talking (demographics, roles, experience levels)
 - Pain points and unmet needs
 - Language patterns and tone
@@ -125,7 +125,7 @@ npx karis chat "Analyze Reddit audience for [brand]. Include:
 
 **Pricing Analysis:**
 ```bash
-npx karis chat "Analyze Reddit discussions about pricing in [brand]'s space. Include:
+npx karis chat --skill reddit-listening "Analyze Reddit discussions about pricing in [brand]'s space. Include:
 - Price sensitivity signals
 - Willingness-to-pay indicators
 - Competitor pricing complaints
@@ -135,7 +135,7 @@ npx karis chat "Analyze Reddit discussions about pricing in [brand]'s space. Inc
 
 **Content Preference Analysis:**
 ```bash
-npx karis chat "Analyze what content performs best for [brand]'s category on Reddit. Include:
+npx karis chat --skill reddit-listening "Analyze what content performs best for [brand]'s category on Reddit. Include:
 - Top-performing post formats (demo, story, data, question)
 - Engagement patterns by content type
 - What gets upvoted vs what gets comments
@@ -185,21 +185,21 @@ npx karis chat "Analyze what content performs best for [brand]'s category on Red
 ### Multi-Brand Comparison
 
 ```bash
-npx karis chat "Compare [brand_a], [brand_b], and [brand_c] on Reddit.
+npx karis chat --skill reddit-listening "Compare [brand_a], [brand_b], and [brand_c] on Reddit.
 Show mention volume, sentiment, and key differentiators."
 ```
 
 ### Time-Based Analysis
 
 ```bash
-npx karis chat "Analyze Reddit sentiment for [brand] over the past 3 months.
+npx karis chat --skill reddit-listening "Analyze Reddit sentiment for [brand] over the past 3 months.
 Show trends and significant events."
 ```
 
 ### Topic-Specific Deep Dive
 
 ```bash
-npx karis chat "Analyze Reddit discussions about [brand]'s [feature/product].
+npx karis chat --skill reddit-listening "Analyze Reddit discussions about [brand]'s [feature/product].
 Include user feedback, feature requests, and comparison to alternatives."
 ```
 

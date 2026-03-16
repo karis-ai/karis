@@ -52,7 +52,7 @@ Extract the target keyword from user context. Identify related terms and search 
 
 **Optional CLI command:**
 ```bash
-npx karis chat "Research keywords for [topic]. Include:
+npx karis chat --skill page-seo "Research keywords for [topic]. Include:
 - Primary keyword recommendation
 - 5 secondary/long-tail keywords
 - Search intent classification
@@ -82,7 +82,7 @@ Analyze the top 5 ranking pages for the target keyword to identify gaps and oppo
 
 **Optional CLI command:**
 ```bash
-npx karis chat "Analyze top 5 ranking pages for '[keyword]'. For each:
+npx karis chat --skill page-seo "Analyze top 5 ranking pages for '[keyword]'. For each:
 - Title and meta description
 - Heading structure
 - Content depth and word count
@@ -154,7 +154,7 @@ Score the page across 10 on-page SEO factors. Generate a score from 0-100.
 
 **Optional CLI command:**
 ```bash
-npx karis chat "Audit this page for on-page SEO: [URL or paste content].
+npx karis chat --skill page-seo "Audit this page for on-page SEO: [URL or paste content].
 Score each factor out of 10:
 Title Tag, Meta Description, H1, Heading Structure, Image Optimization,
 Internal Links, External Links, Social Meta, Content Quality, Keyword Presence.
@@ -204,7 +204,7 @@ Based on the audit and competitor analysis, optimize the page content.
 
 **Optional CLI command:**
 ```bash
-npx karis chat "Optimize this content for '[keyword]'. Based on the audit:
+npx karis chat --skill page-seo "Optimize this content for '[keyword]'. Based on the audit:
 - Rewrite title tag and meta description
 - Fix heading structure
 - Add keyword placements naturally

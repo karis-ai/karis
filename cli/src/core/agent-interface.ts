@@ -36,7 +36,8 @@ export interface AgentInterface {
    */
   streamChat(
     messages: ChatMessage[],
-    onChunk?: (chunk: StreamChunk) => void
+    onChunk?: (chunk: StreamChunk) => void,
+    skillHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown>;
 
   /**

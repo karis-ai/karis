@@ -11,6 +11,7 @@ export interface AgentEvent {
 export interface ChatOptions {
   conversationId?: string;
   mode?: 'lite' | 'full';
+  skillHint?: string;
   tz?: string;
 }
 
@@ -262,6 +263,7 @@ export class KarisClient {
       conversation_id: conversationId,
     };
     if (options.mode) payload.mode_hint = options.mode;
+    if (options.skillHint) payload.skill_hint = options.skillHint;
     if (options.tz) payload.tz = options.tz;
 
     const connectController = new AbortController();

@@ -53,7 +53,7 @@ npx karis brand init <domain>
 If profile exists but needs deeper analysis:
 
 ```bash
-npx karis chat "Analyze my brand deeply. Include competitive landscape, online presence, and content gaps."
+npx karis chat --skill brand-intel "Analyze my brand deeply. Include competitive landscape, online presence, and content gaps."
 ```
 
 ### Step 2: Understand the Situation
@@ -178,7 +178,7 @@ A new SaaS with zero online presence doesn't need competitive analysis, temporal
 - [Channel/approach to avoid] — [reason]
 
 ### Next Step
-Run: `npx karis chat "[specific command for #1 action]"`
+Run: `npx karis chat --skill brand-intel "[specific command for #1 action]"`
 ```
 
 ## Action-to-Skill Mapping
