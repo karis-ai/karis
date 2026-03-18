@@ -12,6 +12,7 @@ import { isJsonLinesOutput, isJsonOutput, isTextOutput, isYamlOutput } from '../
 import { printCommandResult, resetToolCallCounter } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
 import { getLastConversationId, setLastConversationId } from '../utils/config.js';
+import { promptForm } from '../utils/form-prompt.js';
 
 const silentOutput = new Writable({
   write(_chunk, _encoding, callback) {
@@ -28,6 +29,7 @@ export function registerChatCommand(program: Command): void {
     .option('--skill <name>', 'Hint which skill to use, e.g. aeo-geo, reddit-listening')
     .option('-t, --tool <name>', 'Use a specific tool, e.g. search_reddit, search_web')
     .option('--tool-args <json>', 'JSON args for --tool (implies direct execution, returns JSON)')
+    .option('-y, --yes', 'Auto-confirm optional HITL forms with defaults')
     .action(runCommand(async (promptParts: string[] = [], options) => {
         const prompt = promptParts.join(' ').trim();
 
@@ -186,6 +188,11 @@ export function registerChatCommand(program: Command): void {
 
             resetToolCallCounter();
             for await (const chunk of agent.streamChat(messages, undefined, options.skill, options.tool)) {
+              if (chunk.type === 'hitl_request' && agent instanceof RemoteAgent) {
+                await handleHitlChunk(chunk, agent, !!options.yes);
+                continue;
+              }
+
               renderChunk(chunk);
               events.push(chunk);
 
@@ -236,6 +243,43 @@ export function registerChatCommand(program: Command): void {
     }));
 }
 
+async function handleHitlChunk(
+  chunk: StreamChunk,
+  agent: RemoteAgent,
+  autoConfirm: boolean,
+): Promise<void> {
+  const conversationId = agent.getConversationId();
+  const hitlId = chunk.hitl_id;
+  if (!conversationId || !hitlId) return;
+
+  const client = agent.getClient();
+
+  if (chunk.hitl_type === 'auth' && chunk.auth_url) {
+    if (isTextOutput()) {
+      console.log(chalk.yellow(`\n◆ Authorization required`));
+      console.log(chalk.dim(`  Opening browser: ${chunk.auth_url}`));
+    }
+    try {
+      const openModule = await import('open');
+      await openModule.default(chunk.auth_url);
+    } catch {
+      if (isTextOutput()) {
+        console.log(chalk.dim(`  Could not open browser. Please visit the URL manually.`));
+      }
+    }
+    return;
+  }
+
+  if (chunk.form_data) {
+    const nonTty = !process.stdin.isTTY;
+    const payload = await promptForm(chunk.form_data, autoConfirm || nonTty);
+    await client.respondHitl(conversationId, hitlId, payload);
+    if (isTextOutput()) {
+      console.log();
+    }
+  }
+}
+
 async function initializeInteractiveConversation(
   agent: AgentInterface,
   options: { conversation?: string },
@@ -262,7 +306,7 @@ async function initializeInteractiveConversation(
 async function runSingleTurnChatWithBrand(
   agent: AgentInterface,
   prompt: string,
-  options: { conversation?: string; skill?: string; tool?: string },
+  options: { conversation?: string; skill?: string; tool?: string; yes?: boolean },
   brandContext: ChatMessage | null,
 ): Promise<void> {
   const messages = brandContext ? [brandContext] : [];
@@ -293,6 +337,11 @@ async function runSingleTurnChatWithBrand(
   try {
     resetToolCallCounter();
     for await (const chunk of agent.streamChat(messages, undefined, options.skill, options.tool)) {
+      if (chunk.type === 'hitl_request' && agent instanceof RemoteAgent) {
+        await handleHitlChunk(chunk, agent, !!options.yes);
+        continue;
+      }
+
       renderChunk(chunk);
       chunks.push(chunk);
 

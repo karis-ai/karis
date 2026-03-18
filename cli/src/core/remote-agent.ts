@@ -17,6 +17,10 @@ export class RemoteAgent implements AgentInterface {
   private client: KarisClient;
   private conversationId = '';
 
+  getClient(): KarisClient {
+    return this.client;
+  }
+
   constructor(options: RemoteAgentOptions) {
     this.client = new KarisClient({
       apiKey: options.apiKey,
@@ -152,6 +156,17 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
           result: String(event.data?.result ?? ''),
           latency_ms: typeof event.data?.latency_ms === 'number' ? event.data.latency_ms : undefined,
         };
+      case 'hitl_request': {
+        const d = event.data ?? {};
+        return {
+          type: 'hitl_request',
+          hitl_id: String(d.hitl_id ?? ''),
+          hitl_type: String(d.hitl_type ?? 'confirm'),
+          prompt: d.prompt ? String(d.prompt) : undefined,
+          form_data: d.form_data as StreamChunk['form_data'],
+          auth_url: d.auth_url ? String(d.auth_url) : undefined,
+        };
+      }
       case 'done':
         return { type: 'done' };
       case 'error':
