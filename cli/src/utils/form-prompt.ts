@@ -15,7 +15,13 @@ function getDefaultValue(item: HitlFormItem): unknown {
     const defaults = (item.default as string[]) ?? [];
     return defaults.flatMap(d => d.split(',').map(k => k.trim())).filter(Boolean);
   }
-  return item.default?.[0] ?? item.value ?? '';
+  const explicit = item.default?.[0] ?? item.value;
+  if (explicit !== undefined && explicit !== '') return explicit;
+  if ((item.type === 'select' || item.type === 'radio') && item.options?.length) {
+    const first = item.options[0];
+    return typeof first === 'string' ? first : first.value;
+  }
+  return '';
 }
 
 /**
@@ -32,7 +38,10 @@ export function isConfirmationForm(formData: HitlFormData): boolean {
   return items.length > 0 && items.every(i => {
     if (i.type === 'checkbox') return i.value !== undefined;
     if (i.type === 'find-keywords') return (i.default as unknown[])?.length > 0;
-    return (i.default?.[0] ?? '') !== '';
+    if ((i.default?.[0] ?? '') !== '') return true;
+    if (i.value !== undefined && i.value !== '') return true;
+    if ((i.type === 'select' || i.type === 'radio') && i.options?.length) return true;
+    return false;
   });
 }
 
@@ -120,13 +129,18 @@ export async function promptForm(
 ): Promise<Record<string, unknown>> {
   const result: Record<string, unknown> = {};
 
-  if (autoConfirm && isConfirmationForm(formData)) {
+  if (autoConfirm) {
     for (const section of formData.sections ?? []) {
       for (const item of section.items) {
         result[toSnakeCase(item.label)] = getDefaultValue(item);
       }
     }
-    console.log(chalk.dim(`[Auto-confirmed: ${formData.title || 'form'}]`));
+    const label = formData.title || 'form';
+    if (isConfirmationForm(formData)) {
+      console.log(chalk.dim(`[Auto-confirmed: ${label}]`));
+    } else {
+      console.log(chalk.dim(`[Auto-submitted with defaults: ${label}]`));
+    }
     return result;
   }
 

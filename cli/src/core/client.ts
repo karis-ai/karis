@@ -212,7 +212,7 @@ export interface KarisClientOptions {
 export class KarisClient {
   private apiKey: string;
   private apiUrl: string;
-  private static readonly CHAT_CONNECT_TIMEOUT_MS = 30000;
+  private static readonly CHAT_CONNECT_TIMEOUT_MS = 120000;
 
   constructor(options: KarisClientOptions = {}) {
     this.apiKey = options.apiKey || '';
@@ -400,7 +400,7 @@ export class KarisClient {
     conversationId: string,
     hitlId: string,
     payload: Record<string, unknown>,
-  ): Promise<void> {
+  ): Promise<Record<string, unknown>> {
     const url = `${this.apiUrl}/api/v1/agent/convs/${conversationId}/hitl`;
     const response = await fetch(url, {
       method: 'POST',
@@ -413,6 +413,8 @@ export class KarisClient {
     if (!response.ok) {
       throw this.buildError(response.status, await this.extractMessage(response));
     }
+    const body = (await response.json()) as Record<string, unknown>;
+    return body;
   }
 
   async toolDirect(
