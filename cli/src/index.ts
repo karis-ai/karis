@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { registerConfigCommand } from './commands/config.js';
 import { registerChatCommand } from './commands/chat.js';
 import { registerSetupCommand } from './commands/setup.js';
+import { registerLoginCommand } from './commands/login.js';
 import { registerBrandInitCommand } from './commands/brand/init.js';
 import { registerBrandShowCommand } from './commands/brand/show.js';
 import { registerBrandListCommand } from './commands/brand/list.js';
@@ -76,6 +77,7 @@ program.hook('preAction', (_thisCommand, actionCommand) => {
 
 // --- Primary commands ---
 
+registerLoginCommand(program);
 registerSetupCommand(program);
 registerChatCommand(program);
 

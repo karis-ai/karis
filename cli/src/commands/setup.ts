@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
+import { select } from '@inquirer/prompts';
 import { KarisClient, type APIKeyInfo, type BrandProfile } from '../core/client.js';
 import { loadResolvedConfig, maskValue, setConfigValue } from '../utils/config.js';
 import { InteractiveSession } from '../utils/interactive.js';
@@ -8,6 +9,7 @@ import { emitStructuredEvent, printCommandResult, section, success, warning } fr
 import { isTextOutput } from '../core/cli-context.js';
 import { runCommand } from '../utils/run-command.js';
 import { executeSingleTurn } from '../utils/agent-helper.js';
+import { browserLogin } from './login.js';
 
 const API_KEYS_URL = 'https://karis.im/settings/api-keys';
 
@@ -76,6 +78,67 @@ export async function runSetup(options: SetupOptions = {}): Promise<void> {
       console.log(success(`API key verified: ${keyInfo.name} (${keyInfo.key_prefix}...)`));
       console.log();
     }
+  } else if (process.stdin.isTTY && isTextOutput()) {
+    const method = await select({
+      message: 'How would you like to authenticate?',
+      choices: [
+        { name: 'Log in with browser (recommended)', value: 'browser' as const },
+        { name: 'Paste an API key manually', value: 'paste' as const },
+      ],
+    });
+
+    if (method === 'browser') {
+      const spinner = ora('Opening browser...').start();
+      try {
+        spinner.text = 'Waiting for authorization...';
+        apiKey = await browserLogin(apiUrl);
+        spinner.succeed('Authorized');
+      } catch (error) {
+        spinner.fail('Login failed');
+        throw error;
+      }
+
+      apiKeySource = 'prompt';
+      keyInfo = await verifyApiKey(apiKey, apiUrl);
+      await setConfigValue('api-key', apiKey);
+      apiKeySaved = true;
+
+      console.log(success(`API key saved: ${keyInfo.name} (${keyInfo.key_prefix}...)`));
+      console.log();
+    } else {
+      console.log();
+      console.log(chalk.dim(`Create or manage keys at: ${API_KEYS_URL}`));
+      console.log();
+
+      const enteredApiKey = await session.ask('Enter your Karis API key (leave blank to skip)');
+      if (!enteredApiKey) {
+        session.close();
+        console.log();
+        console.log(warning('Setup paused. No API key was provided.'));
+        console.log(chalk.dim(`Run ${chalk.cyan('npx karis login')} or ${chalk.cyan('npx karis setup')} to try again.`));
+        console.log();
+
+        printCommandResult({
+          action: 'setup',
+          configured: false,
+          api_key: { provided: false, source: 'unset', create_url: API_KEYS_URL },
+          base_url: { value: apiUrl, saved: baseUrlSaved },
+          brand: { status: 'deferred' },
+          prompts: session.getTranscript(),
+        });
+        return;
+      }
+
+      apiKey = enteredApiKey;
+      apiKeySource = 'prompt';
+      keyInfo = await verifyApiKey(apiKey, apiUrl);
+      await setConfigValue('api-key', apiKey);
+      apiKeySaved = true;
+
+      console.log();
+      console.log(success(`API key verified and saved: ${keyInfo.name} (${keyInfo.key_prefix}...)`));
+      console.log();
+    }
   } else {
     if (isTextOutput()) {
       console.log(chalk.dim(`Paste an API key below, or leave it blank and create one at:`));
@@ -98,18 +161,9 @@ export async function runSetup(options: SetupOptions = {}): Promise<void> {
       printCommandResult({
         action: 'setup',
         configured: false,
-        api_key: {
-          provided: false,
-          source: 'unset',
-          create_url: API_KEYS_URL,
-        },
-        base_url: {
-          value: apiUrl,
-          saved: baseUrlSaved,
-        },
-        brand: {
-          status: 'deferred',
-        },
+        api_key: { provided: false, source: 'unset', create_url: API_KEYS_URL },
+        base_url: { value: apiUrl, saved: baseUrlSaved },
+        brand: { status: 'deferred' },
         prompts: session.getTranscript(),
       });
       return;

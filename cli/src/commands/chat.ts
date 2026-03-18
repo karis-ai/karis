@@ -273,7 +273,19 @@ async function handleHitlChunk(
   if (chunk.form_data) {
     const nonTty = !process.stdin.isTTY;
     const payload = await promptForm(chunk.form_data, autoConfirm || nonTty);
-    await client.respondHitl(conversationId, hitlId, payload);
+    try {
+      const result = await client.respondHitl(conversationId, hitlId, payload);
+      if (result?.data && typeof result.data === 'object' && 'code' in result.data) {
+        const code = (result.data as Record<string, unknown>).code;
+        if (code === 'AGENT_NOT_FOUND' && isTextOutput()) {
+          console.log(chalk.dim(`  [Agent restarting with HITL result...]`));
+        }
+      }
+    } catch (err) {
+      if (isTextOutput()) {
+        console.error(chalk.red(`\n  HITL response failed: ${err instanceof Error ? err.message : String(err)}`));
+      }
+    }
     if (isTextOutput()) {
       console.log();
     }
@@ -356,7 +368,7 @@ async function runSingleTurnChatWithBrand(
     process.removeListener('SIGINT', sigintHandler);
   }
 
-  if (agent instanceof RemoteAgent && options.conversation) {
+  if (agent instanceof RemoteAgent) {
     const convId = agent.getConversationId();
     if (convId) {
       await setLastConversationId(convId);
