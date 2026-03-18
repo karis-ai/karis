@@ -7,7 +7,7 @@
 
 **Agent Action:**
 ```bash
-npx karis chat --skill reddit-listening "Analyze Reddit sentiment for Notion. Include overall sentiment, top topics, pain points, and key subreddits."
+npx @karis-ai/cli chat --skill reddit-listening "Analyze Reddit sentiment for Notion. Include overall sentiment, top topics, pain points, and key subreddits."
 ```
 
 **Sample Output:**
@@ -51,7 +51,7 @@ npx karis chat --skill reddit-listening "Analyze Reddit sentiment for Notion. In
 
 **Agent Action:**
 ```bash
-npx karis chat --skill reddit-listening "Compare Notion vs Obsidian on Reddit. Show mention volume, sentiment, and key differentiators."
+npx @karis-ai/cli chat --skill reddit-listening "Compare Notion vs Obsidian on Reddit. Show mention volume, sentiment, and key differentiators."
 ```
 
 **Sample Output:**
@@ -98,7 +98,7 @@ Topics where Obsidian is discussed but Notion isn't:
 
 **Agent Action:**
 ```bash
-npx karis chat --skill reddit-listening "Find Reddit communities discussing project management tools. Include member counts and activity levels."
+npx @karis-ai/cli chat --skill reddit-listening "Find Reddit communities discussing project management tools. Include member counts and activity levels."
 ```
 
 **Sample Output:**

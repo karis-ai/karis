@@ -12,11 +12,16 @@
 curl -fsSL https://raw.githubusercontent.com/karis-ai/karis/main/install.sh | bash
 ```
 
-Or install directly:
+### npm
 
 ```bash
-npx karis setup
-npx karis chat
+# Run without installing
+npx @karis-ai/cli setup
+
+# Or install globally (then use `karis` directly)
+npm install -g @karis-ai/cli
+karis setup
+karis chat
 ```
 
 ### Claude Code
@@ -29,6 +34,12 @@ npx karis chat
 ### Cursor / Windsurf / Codex
 
 Point your agent to `agents/AGENTS.md` for skill descriptions.
+
+Or add this to your agent's system prompt / rules:
+
+```
+Read https://karis.im/skill.md and follow instructions
+```
 
 ---
 
@@ -48,19 +59,19 @@ Karis exposes three tiers of capability:
 
 ```bash
 # First-time setup
-npx karis setup
+karis setup
 
 # Interactive agent chat (Layer 3)
-npx karis chat
+karis chat
 
 # Direct tool calls (Layer 1)
-npx karis web search "AI coding tools"
-npx karis reddit search "AI agents" --subreddit SaaS
-npx karis x tweets elonmusk
+karis web search "AI coding tools"
+karis reddit search "AI agents" --subreddit SaaS
+karis x tweets elonmusk
 
 # Skill-guided chat (Layer 2)
-npx karis chat --skill brand-intel "Analyze my brand"
-npx karis chat --skill aeo-geo "Audit AI search visibility"
+karis chat --skill brand-intel "Analyze my brand"
+karis chat --skill aeo-geo "Audit AI search visibility"
 ```
 
 ---
@@ -158,7 +169,7 @@ See [agents/AGENTS.md](agents/AGENTS.md) for full skill documentation.
 
 ## Prerequisites
 
-- **Karis API key** — Get from [karis.im](https://karis.im)
+- **Karis API key** — Get from [app.karis.im/agent](https://app.karis.im/agent)
 - **Node.js 18+**
 
 ---
@@ -194,7 +205,7 @@ The CLI connects to Karis Platform for enhanced marketing intelligence.
 
 **Setup:**
 ```bash
-npx karis setup
+karis setup
 ```
 
 Interactive wizard guides you through:
@@ -216,7 +227,7 @@ The CLI connects to Karis Platform for professional marketing intelligence:
 
 **Skills are fully functional knowledge bases.** The CLI + Platform adds scale, depth, and strategic intelligence.
 
-Get your API key at [karis.im](https://karis.im)
+Get your API key at [app.karis.im/agent](https://app.karis.im/agent)
 
 ---
 

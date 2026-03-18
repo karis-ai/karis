@@ -16,9 +16,9 @@ Karis exposes three tiers of capability:
 
 | Layer | What | How to invoke |
 |-------|------|---------------|
-| **Layer 1 — Tool Runtime** | Atomic read-only ops | `npx karis <namespace> <action>` — direct, no LLM, JSON |
-| **Layer 2 — Domain Agent** | Skills with strategy | `npx karis chat --skill <name> "prompt"` — LLM-powered |
-| **Layer 3 — CMO Orchestrator** | Multi-channel planning | `npx karis chat "prompt"` — full agent reasoning |
+| **Layer 1 — Tool Runtime** | Atomic read-only ops | `npx @karis-ai/cli <namespace> <action>` — direct, no LLM, JSON |
+| **Layer 2 — Domain Agent** | Skills with strategy | `npx @karis-ai/cli chat --skill <name> "prompt"` — LLM-powered |
+| **Layer 3 — CMO Orchestrator** | Multi-channel planning | `npx @karis-ai/cli chat "prompt"` — full agent reasoning |
 
 ### Layer 1 Tools (directly callable)
 
@@ -51,7 +51,7 @@ Use Layer 1 when you need raw data fast. Use `--skill` for strategy-heavy tasks.
 - User asks about competitors, audience, or positioning
 
 **What it does:**
-- Builds brand profile via `npx karis brand init` or `npx karis brand show`
+- Builds brand profile via `npx @karis-ai/cli brand init` or `npx @karis-ai/cli brand show`
 - Assesses current marketing state (AI search visibility, community presence, competitive position)
 - Recommends top 3-5 prioritized growth actions with specific Karis skills to use next
 
@@ -81,7 +81,7 @@ Use Layer 1 when you need raw data fast. Use `--skill` for strategy-heavy tasks.
 - User wants to understand sentiment trends
 
 **What it does:**
-- Analyzes Reddit discussions via Karis CLI (`npx karis chat`)
+- Analyzes Reddit discussions via Karis CLI (`npx @karis-ai/cli chat`)
 - Tracks brand mentions, competitor mentions, sentiment
 - Discovers community pain points and feature requests
 - Identifies engagement opportunities
@@ -166,22 +166,22 @@ Use Layer 1 when you need raw data fast. Use `--skill` for strategy-heavy tasks.
 ### Tool Commands (Layer 1)
 
 ```bash
-npx karis web search "AI tools"              # Search the web
-npx karis reddit search "AI" --subreddit SaaS # Search Reddit
-npx karis x tweets elonmusk                   # Get tweets
-npx karis geo data --domain mybrand.com       # GEO data
-npx karis tools list                          # Discover all tools
+npx @karis-ai/cli web search "AI tools"              # Search the web
+npx @karis-ai/cli reddit search "AI" --subreddit SaaS # Search Reddit
+npx @karis-ai/cli x tweets elonmusk                   # Get tweets
+npx @karis-ai/cli geo data --domain mybrand.com       # GEO data
+npx @karis-ai/cli tools list                          # Discover all tools
 ```
 
 ### Skill Usage (Layer 2)
 
 | Skill | CLI Command |
 |-------|-------------|
-| brand-intel | `npx karis chat --skill brand-intel "Analyze my brand"` |
-| aeo-geo | `npx karis chat --skill aeo-geo "Run a GEO audit"` |
-| reddit-listening | `npx karis chat --skill reddit-listening "Analyze sentiment"` |
-| reddit-growth | `npx karis chat --skill reddit-growth "Write a Reddit post"` |
-| page-seo | `npx karis chat --skill page-seo "Audit this page"` |
+| brand-intel | `npx @karis-ai/cli chat --skill brand-intel "Analyze my brand"` |
+| aeo-geo | `npx @karis-ai/cli chat --skill aeo-geo "Run a GEO audit"` |
+| reddit-listening | `npx @karis-ai/cli chat --skill reddit-listening "Analyze sentiment"` |
+| reddit-growth | `npx @karis-ai/cli chat --skill reddit-growth "Write a Reddit post"` |
+| page-seo | `npx @karis-ai/cli chat --skill page-seo "Audit this page"` |
 | elonmusk-repost | Self-contained (no CLI required) |
 
 ## Best Practices
@@ -191,10 +191,10 @@ npx karis tools list                          # Discover all tools
 Before running any skill except `brand-intel`, check if a brand profile exists:
 
 ```bash
-npx karis brand show
+npx @karis-ai/cli brand show
 ```
 
-If no profile exists, run `npx karis brand init <domain>` first.
+If no profile exists, run `npx @karis-ai/cli brand init <domain>` first.
 
 ### 2. Provide Specific Recommendations
 

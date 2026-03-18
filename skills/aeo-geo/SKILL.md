@@ -24,7 +24,7 @@ Audit your brand's AI search presence — both how visible you are in AI respons
 
 ## Prerequisites
 
-- Karis CLI installed (`npx karis`)
+- Karis CLI installed (`npx @karis-ai/cli`)
 - Karis API key configured (`karis setup`)
 - Brand profile created (`karis brand init`)
 
@@ -70,18 +70,18 @@ Task Progress:
 ### Step 1: Load Brand Context
 
 ```bash
-npx karis brand show
+npx @karis-ai/cli brand show
 ```
 
 If no brand profile exists:
 ```bash
-npx karis brand init <domain>
+npx @karis-ai/cli brand init <domain>
 ```
 
 ### Step 2: Execute Visibility Audit
 
 ```bash
-npx karis chat --skill aeo-geo "Run a GEO visibility audit for my brand. Include:
+npx @karis-ai/cli chat --skill aeo-geo "Run a GEO visibility audit for my brand. Include:
 - Answer Share (% of AI responses mentioning my brand)
 - Citation Rate (% citing my website)
 - Mention Position (where I appear in responses)
@@ -130,13 +130,13 @@ Task Progress:
 ### Step 1: Load Brand Context
 
 ```bash
-npx karis brand show
+npx @karis-ai/cli brand show
 ```
 
 ### Step 2: Execute Site Audit
 
 ```bash
-npx karis chat --skill aeo-geo "Run a GEO site audit for [domain]. Analyze:
+npx @karis-ai/cli chat --skill aeo-geo "Run a GEO site audit for [domain]. Analyze:
 - AI crawler accessibility (robots.txt, llms.txt, sitemap)
 - Content structure (headings, depth, scannability)
 - Semantic relevance (keyword coverage, topical depth)
@@ -199,13 +199,13 @@ Task Progress:
 ### Step 1: Load Brand Context
 
 ```bash
-npx karis brand show
+npx @karis-ai/cli brand show
 ```
 
 ### Step 2: Execute Content Strategy Analysis
 
 ```bash
-npx karis chat --skill aeo-geo "Analyze content strategy for [domain] for AI search optimization. Include:
+npx @karis-ai/cli chat --skill aeo-geo "Analyze content strategy for [domain] for AI search optimization. Include:
 - Map all major content (product, blog, docs, case studies)
 - Identify 3-7 topic clusters with primary keywords
 - For each cluster: existing content, content gaps, AI citation potential
@@ -252,7 +252,7 @@ npx karis chat --skill aeo-geo "Analyze content strategy for [domain] for AI sea
 Run all three audits together:
 
 ```bash
-npx karis chat --skill aeo-geo "Run a full GEO audit for [brand/domain]. Include:
+npx @karis-ai/cli chat --skill aeo-geo "Run a full GEO audit for [brand/domain]. Include:
 1. Visibility audit — Am I being mentioned by AI search engines?
 2. Site audit — Is my website optimized for AI engines?
 3. Content strategy — What content should I create?

@@ -4,11 +4,11 @@ Available marketing intelligence skills for AI agents.
 
 ## Layer Cake
 
-- **Layer 1 (Tools):** `npx karis <namespace> <action>` — direct data retrieval (web, x, reddit, youtube, brand, geo, schedule, memory)
-- **Layer 2 (Skills):** `npx karis chat --skill <name> "prompt"` — LLM-powered domain agents
-- **Layer 3 (CMO):** `npx karis chat "prompt"` — full agent reasoning
+- **Layer 1 (Tools):** `npx @karis-ai/cli <namespace> <action>` — direct data retrieval (web, x, reddit, youtube, brand, geo, schedule, memory)
+- **Layer 2 (Skills):** `npx @karis-ai/cli chat --skill <name> "prompt"` — LLM-powered domain agents
+- **Layer 3 (CMO):** `npx @karis-ai/cli chat "prompt"` — full agent reasoning
 
-For the complete tool list, run `npx karis tools list`.
+For the complete tool list, run `npx @karis-ai/cli tools list`.
 
 ## Skills
 

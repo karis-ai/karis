@@ -22,7 +22,7 @@ Analyze a brand and recommend what to do next. Core question: "What should this 
 
 ## Prerequisites
 
-- Karis CLI installed (`npx karis`)
+- Karis CLI installed (`npx @karis-ai/cli`)
 - Karis API key configured (`karis setup`)
 
 ## Workflow
@@ -41,19 +41,19 @@ Task Progress:
 Check if brand profile exists:
 
 ```bash
-npx karis brand show
+npx @karis-ai/cli brand show
 ```
 
 If no profile exists, create one:
 
 ```bash
-npx karis brand init <domain>
+npx @karis-ai/cli brand init <domain>
 ```
 
 If profile exists but needs deeper analysis:
 
 ```bash
-npx karis chat --skill brand-intel "Analyze my brand deeply. Include competitive landscape, online presence, and content gaps."
+npx @karis-ai/cli chat --skill brand-intel "Analyze my brand deeply. Include competitive landscape, online presence, and content gaps."
 ```
 
 ### Step 2: Understand the Situation
@@ -178,7 +178,7 @@ A new SaaS with zero online presence doesn't need competitive analysis, temporal
 - [Channel/approach to avoid] — [reason]
 
 ### Next Step
-Run: `npx karis chat --skill brand-intel "[specific command for #1 action]"`
+Run: `npx @karis-ai/cli chat --skill brand-intel "[specific command for #1 action]"`
 ```
 
 ## Action-to-Skill Mapping

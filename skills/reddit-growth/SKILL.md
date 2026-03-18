@@ -22,7 +22,7 @@ Generate Reddit growth content — posts, comments, and engagement strategies.
 
 ## Prerequisites
 
-- Karis CLI installed (`npx karis`)
+- Karis CLI installed (`npx @karis-ai/cli`)
 - Karis API key configured (`karis setup`)
 - Optional: Brand profile (`karis brand init`)
 
@@ -55,7 +55,7 @@ If user says "write a post" or "go viral," infer the mode directly.
 ### Step 3: Generate Content
 
 ```bash
-npx karis chat --skill reddit-growth "Write a Reddit post for [product]. Context:
+npx @karis-ai/cli chat --skill reddit-growth "Write a Reddit post for [product]. Context:
 - Product: [description]
 - Karma: [level]
 - Target audience: [who]
@@ -247,7 +247,7 @@ Wait 24-48h between posts. Rewrite title per community, never copy-paste identic
 - r/IMadeThis: "Have a Project? Share it below!" — regular
 
 ```bash
-npx karis chat --skill reddit-growth "Find Reddit threads about [topic] where I can add value.
+npx @karis-ai/cli chat --skill reddit-growth "Find Reddit threads about [topic] where I can add value.
 - Focus on posts from last 7 days
 - Score by relevance to [product]
 - Include suggested comment angles"

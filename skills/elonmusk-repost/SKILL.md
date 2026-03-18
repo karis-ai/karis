@@ -22,7 +22,7 @@ Analyze what Elon Musk reposts on X and generate tweets optimized for his engage
 
 ## Prerequisites
 
-- Optional: Karis CLI installed (`npx karis`) for deeper brand context
+- Optional: Karis CLI installed (`npx @karis-ai/cli`) for deeper brand context
 - Optional: Karis API key configured (`karis setup`)
 
 ## How to Use
@@ -45,7 +45,7 @@ If the user provides a draft tweet, score THAT draft and generate improved varia
 If the user has Karis CLI configured, pull brand context first:
 
 ```bash
-npx karis brand show
+npx @karis-ai/cli brand show
 ```
 
 Use brand profile data (competitors, audience, differentiators) to sharpen the tweet angle. If no brand profile exists, proceed without it.
@@ -247,7 +247,7 @@ This is often the **highest-conversion path** — you're already in his notifica
 For deeper content optimization, use Karis CLI:
 
 ```bash
-npx karis chat --skill elonmusk-repost "Write a viral X/Twitter launch tweet for [product]. Context:
+npx @karis-ai/cli chat --skill elonmusk-repost "Write a viral X/Twitter launch tweet for [product]. Context:
 - Product: [description]
 - Target: Elon Musk repost
 - Include: hook, wow factor, demo description

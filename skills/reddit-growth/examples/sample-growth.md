@@ -7,7 +7,7 @@
 
 **Agent Action:**
 ```bash
-npx karis chat --skill reddit-growth "Write a Reddit post for my AI coding assistant. Context:
+npx @karis-ai/cli chat --skill reddit-growth "Write a Reddit post for my AI coding assistant. Context:
 - Product: AI pair programmer that reviews PRs
 - Target: Developers
 - Goal: Signups and feedback
@@ -62,7 +62,7 @@ Tuesday 10am EST (highest engagement in r/programming)
 
 **Agent Action:**
 ```bash
-npx karis chat --skill reddit-growth "Find Reddit threads about no-code tools from last 7 days. Include comment angles and draft responses."
+npx @karis-ai/cli chat --skill reddit-growth "Find Reddit threads about no-code tools from last 7 days. Include comment angles and draft responses."
 ```
 
 **Sample Output:**
@@ -104,7 +104,7 @@ npx karis chat --skill reddit-growth "Find Reddit threads about no-code tools fr
 
 **Agent Action:**
 ```bash
-npx karis chat --skill reddit-growth "Create a Reddit growth strategy for my B2B SaaS. Product: AI meeting assistant for sales teams."
+npx @karis-ai/cli chat --skill reddit-growth "Create a Reddit growth strategy for my B2B SaaS. Product: AI meeting assistant for sales teams."
 ```
 
 **Sample Output:**

@@ -1,7 +1,7 @@
 ---
 name: karis
 version: 0.1.0
-description: AI-powered marketing intelligence — brand analysis, AI search visibility, Reddit growth, viral launch, and SEO optimization for AI agents.
+description: CMO brain + execution for AI agents. Brand analysis, competitive intelligence, GEO/AEO visibility audits, AI search optimization, on-page SEO, keyword research, Reddit sentiment monitoring, Reddit content strategy, X/Twitter viral optimization, web search, webpage analysis, content marketing, and growth strategy. Requires API key from app.karis.im/agent.
 homepage: https://karis.im
 metadata: {"api_base":"https://api.karis.im","github":"https://github.com/karis-ai/karis"}
 ---
@@ -54,14 +54,14 @@ curl -fsSL https://raw.githubusercontent.com/karis-ai/karis/main/install.sh | ba
 Or install directly with npx:
 
 ```bash
-npx karis setup
+npx @karis-ai/cli setup
 ```
 
 Interactive wizard guides you through configuring your API key and creating your first brand profile.
 
 Verify:
 ```bash
-npx karis doctor
+karis doctor
 ```
 
 ---
@@ -71,52 +71,52 @@ npx karis doctor
 ### 1. Setup
 
 ```bash
-npx karis setup
-# → Prompts for API key (get from https://karis.im)
+karis setup
+# → Prompts for API key (get from https://app.karis.im/agent)
 # → Creates your brand profile from a domain
 ```
 
 ### 2. Chat
 
 ```bash
-npx karis chat
+karis chat
 # → Interactive CMO session with marketing intelligence
 ```
 
 ### 3. Tool Commands (Layer 1)
 
 ```bash
-npx karis web search "AI coding tools"
-npx karis reddit search "AI agents" --subreddit SaaS
-npx karis x tweets elonmusk
-npx karis geo data --domain mybrand.com
+karis web search "AI coding tools"
+karis reddit search "AI agents" --subreddit SaaS
+karis x tweets elonmusk
+karis geo data --domain mybrand.com
 ```
 
 ### 4. Skill-guided Chat (Layer 2)
 
 ```bash
-npx karis chat --skill brand-intel "Analyze my brand"
-npx karis chat --skill aeo-geo "Audit AI search visibility"
-npx karis chat --skill reddit-growth "Write Reddit posts"
+karis chat --skill brand-intel "Analyze my brand"
+karis chat --skill aeo-geo "Audit AI search visibility"
+karis chat --skill reddit-growth "Write Reddit posts"
 ```
 
 ### 5. Single-turn queries (Layer 3)
 
 ```bash
-npx karis chat "Audit my brand's AI search visibility"
-npx karis chat "Find Reddit content opportunities for my brand"
-npx karis chat "Write a viral tweet for X"
+karis chat "Audit my brand's AI search visibility"
+karis chat "Find Reddit content opportunities for my brand"
+karis chat "Write a viral tweet for X"
 ```
 
 ### 6. Brand management
 
 ```bash
-npx karis brand init mybrand.com     # Create brand profile
-npx karis brand show                 # View current profile
-npx karis brand list                 # List all brands
-npx karis brand select <name>        # Switch active brand
-npx karis brand customize            # Customize profile fields
-npx karis brand refresh              # Re-fetch brand data
+karis brand init mybrand.com     # Create brand profile
+karis brand show                 # View current profile
+karis brand list                 # List all brands
+karis brand select <name>        # Switch active brand
+karis brand customize            # Customize profile fields
+karis brand refresh              # Re-fetch brand data
 ```
 
 ---
@@ -129,17 +129,17 @@ Karis uses API keys with Bearer token auth. The CLI handles this transparently v
 
 ```bash
 # Set API key (interactive)
-npx karis setup
+karis setup
 
 # Set API key (direct)
-npx karis config set api-key sk-ka-...
+karis config set api-key sk-ka-...
 
 # View current config
-npx karis config list
+karis config list
 
 # Use via environment variable (no file writes)
 export KARIS_API_KEY=sk-ka-...
-npx karis chat "analyze my brand"
+karis chat "analyze my brand"
 ```
 
 ### For REST API Users
@@ -183,25 +183,25 @@ Karis CLI auto-detects TTY and switches output format:
 
 ```bash
 # Unified -f flag (recommended)
-npx karis reddit search "AI" -f table   # Table (default in TTY)
-npx karis reddit search "AI" -f json    # JSON
-npx karis reddit search "AI" -f yaml    # YAML
-npx karis reddit search "AI" -f csv     # CSV
-npx karis reddit search "AI" -f md      # Markdown table
+karis reddit search "AI" -f table   # Table (default in TTY)
+karis reddit search "AI" -f json    # JSON
+karis reddit search "AI" -f yaml    # YAML
+karis reddit search "AI" -f csv     # CSV
+karis reddit search "AI" -f md      # Markdown table
 
 # Legacy flags (still supported)
-npx karis brand show --json
-npx karis brand show --yaml
-npx karis brand show --jsonl
+karis brand show --json
+karis brand show --yaml
+karis brand show --jsonl
 
 # Compact mode — strips meta, command, latency fields (saves tokens)
-npx karis brand show --json --compact
+karis brand show --json --compact
 
 # Environment variable override
-OUTPUT=json npx karis brand show
+OUTPUT=json karis brand show
 
 # Piping auto-detects (YAML)
-npx karis brand show | your-script
+karis brand show | your-script
 ```
 
 All structured output includes `schema_version: "1"` for forward compatibility.
@@ -229,7 +229,7 @@ error:
   code: AUTH_REQUIRED
   message: "API key not configured"
   next_steps:
-    - "Run: npx karis setup"
+    - "Run: karis setup"
 ```
 
 ### Streaming (JSONL)
@@ -237,7 +237,7 @@ error:
 For chat commands, `--jsonl` emits newline-delimited events:
 
 ```bash
-npx karis --jsonl chat "analyze my brand"
+karis --jsonl chat "analyze my brand"
 ```
 
 Each line is a JSON object:
@@ -253,7 +253,7 @@ Each line is a JSON object:
 
 ## Marketing Intelligence Skills
 
-Karis provides 6 marketing intelligence modules. Each can be used via the CLI (`npx karis chat`) or as an AI agent skill.
+Karis provides 6 marketing intelligence modules. Each can be used via the CLI (`karis chat`) or as an AI agent skill.
 
 ---
 
@@ -264,9 +264,9 @@ Karis provides 6 marketing intelligence modules. Each can be used via the CLI (`
 **Core question:** "What should this brand do RIGHT NOW to grow?"
 
 ```bash
-npx karis chat "Analyze my brand and suggest growth actions"
-npx karis chat "What's my competitive positioning vs alternatives?"
-npx karis chat "Identify my brand's biggest growth opportunity"
+karis chat "Analyze my brand and suggest growth actions"
+karis chat "What's my competitive positioning vs alternatives?"
+karis chat "Identify my brand's biggest growth opportunity"
 ```
 
 **What it does:**
@@ -292,9 +292,9 @@ npx karis chat "Identify my brand's biggest growth opportunity"
 **When to use:** Audit how your brand appears in ChatGPT, Perplexity, Claude, and other AI search engines. Optimize your website for AI crawlers.
 
 ```bash
-npx karis chat "Audit my brand's AI search visibility"
-npx karis chat "How does my website score for AI crawlers?"
-npx karis chat "What topics am I missing in AI search results?"
+karis chat "Audit my brand's AI search visibility"
+karis chat "How does my website score for AI crawlers?"
+karis chat "What topics am I missing in AI search results?"
 ```
 
 **Two modes:**
@@ -330,10 +330,10 @@ Scores your website's readiness for AI crawlers on a 0-100 scale:
 **When to use:** Monitor Reddit discussions, track brand mentions, analyze community sentiment, discover pain points.
 
 ```bash
-npx karis chat "What are people saying about my brand on Reddit?"
-npx karis chat "Compare my Reddit sentiment vs competitors"
-npx karis chat "Find the top complaints about products in my space"
-npx karis chat "Which subreddits discuss topics related to my brand?"
+karis chat "What are people saying about my brand on Reddit?"
+karis chat "Compare my Reddit sentiment vs competitors"
+karis chat "Find the top complaints about products in my space"
+karis chat "Which subreddits discuss topics related to my brand?"
 ```
 
 **Five analysis types:**
@@ -352,9 +352,9 @@ npx karis chat "Which subreddits discuss topics related to my brand?"
 **When to use:** Generate Reddit posts, find comment opportunities, build engagement strategies.
 
 ```bash
-npx karis chat "Write viral Reddit posts for my product"
-npx karis chat "Find comment opportunities to mention my brand"
-npx karis chat "Create a Reddit content calendar for this month"
+karis chat "Write viral Reddit posts for my product"
+karis chat "Find comment opportunities to mention my brand"
+karis chat "Create a Reddit content calendar for this month"
 ```
 
 **Three modes:**
@@ -383,9 +383,9 @@ npx karis chat "Create a Reddit content calendar for this month"
 **When to use:** Optimize tweets for maximum reach on X. Score content against 15 proven viral patterns.
 
 ```bash
-npx karis chat "Write a viral product launch tweet for X"
-npx karis chat "Score this tweet: 'Built an AI that designs logos in 10 seconds'"
-npx karis chat "Help me go viral on X with my product announcement"
+karis chat "Write a viral product launch tweet for X"
+karis chat "Score this tweet: 'Built an AI that designs logos in 10 seconds'"
+karis chat "Help me go viral on X with my product announcement"
 ```
 
 **15 core repost patterns** (weights 1-10):
@@ -420,10 +420,10 @@ npx karis chat "Help me go viral on X with my product announcement"
 **When to use:** Keyword research, competitor analysis, on-page SEO audit, content optimization.
 
 ```bash
-npx karis chat "Audit the SEO of my homepage"
-npx karis chat "Research keywords for my product category"
-npx karis chat "Compare my page SEO with top competitors"
-npx karis chat "Optimize my landing page for search"
+karis chat "Audit the SEO of my homepage"
+karis chat "Research keywords for my product category"
+karis chat "Compare my page SEO with top competitors"
+karis chat "Optimize my landing page for search"
 ```
 
 **Four-step workflow:**
@@ -599,7 +599,7 @@ Returns: `id`, `name`, `key_prefix`, `status`, `credit_limit`, `credits_consumed
 | `INSUFFICIENT_CREDITS` | 403 | Credit limit reached |
 | `MISSING_SCOPE` | 403 | Key lacks required scope |
 | `ACCESS_DENIED` | 403 | Insufficient permissions |
-| `NO_BRAND` | 404 | No brand profile — run `npx karis brand init` |
+| `NO_BRAND` | 404 | No brand profile — run `karis brand init` |
 | `NOT_FOUND` | 404 | Resource not found |
 | `AGENT_ERROR` | 500 | Agent execution failed — retry or rephrase |
 | `REQUEST_TIMEOUT` | 504 | Backend timed out |
@@ -617,12 +617,12 @@ Returns: `id`, `name`, `key_prefix`, `status`, `credit_limit`, `credits_consumed
 ### Config Keys
 
 ```bash
-npx karis config set api-key sk-ka-...
-npx karis config set base-url https://api.karis.im
-npx karis config list
+karis config set api-key sk-ka-...
+karis config set base-url https://api.karis.im
+karis config list
 ```
 
-List commands save a short index — reference items by number: `npx karis show 1`.
+List commands save a short index — reference items by number: `karis show 1`.
 
 ---
 
@@ -630,32 +630,32 @@ List commands save a short index — reference items by number: `npx karis show 
 
 ```bash
 # Setup
-npx karis setup                  # First-time wizard
-npx karis doctor                 # Verify environment
+karis setup                  # First-time wizard
+karis doctor                 # Verify environment
 
 # Tool commands (Layer 1)
-npx karis web search "AI tools"  # Search the web
-npx karis reddit posts SaaS      # Browse subreddit
-npx karis x tweets elonmusk      # Get user tweets
-npx karis geo data               # GEO visibility
+karis web search "AI tools"  # Search the web
+karis reddit posts SaaS      # Browse subreddit
+karis x tweets elonmusk      # Get user tweets
+karis geo data               # GEO visibility
 
 # Agent chat (Layer 2/3)
-npx karis chat "your prompt"     # Single-turn query
-npx karis chat --skill aeo-geo "audit" # Skill-guided
-npx karis chat -c <id>           # Continue conversation
+karis chat "your prompt"     # Single-turn query
+karis chat --skill aeo-geo "audit" # Skill-guided
+karis chat -c <id>           # Continue conversation
 
 # Brand management
-npx karis brand init <domain>    # Create brand profile
-npx karis brand show             # View current profile
+karis brand init <domain>    # Create brand profile
+karis brand show             # View current profile
 
 # Output
-npx karis reddit search "AI" -f json   # JSON output
-npx karis --json <command>             # Legacy JSON flag
-npx karis --jsonl chat "..."           # JSONL streaming
+karis reddit search "AI" -f json   # JSON output
+karis --json <command>             # Legacy JSON flag
+karis --jsonl chat "..."           # JSONL streaming
 
 # Discovery
-npx karis tools list             # Available tools & skills
-npx karis capabilities           # Layer Cake overview
+karis tools list             # Available tools & skills
+karis capabilities           # Layer Cake overview
 ```
 
 ---
@@ -672,7 +672,7 @@ npx karis capabilities           # Layer Cake overview
 
 Skills are fully functional knowledge bases. The CLI + Platform adds scale, depth, and strategic intelligence.
 
-Get your API key at [karis.im](https://karis.im)
+Get your API key at [app.karis.im/agent](https://app.karis.im/agent)
 
 ---
 
