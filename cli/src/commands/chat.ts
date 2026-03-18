@@ -356,7 +356,7 @@ async function runSingleTurnChatWithBrand(
     process.removeListener('SIGINT', sigintHandler);
   }
 
-  if (agent instanceof RemoteAgent && options.conversation) {
+  if (agent instanceof RemoteAgent) {
     const convId = agent.getConversationId();
     if (convId) {
       await setLastConversationId(convId);
