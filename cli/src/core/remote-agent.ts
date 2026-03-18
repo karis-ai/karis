@@ -17,6 +17,10 @@ export class RemoteAgent implements AgentInterface {
   private client: KarisClient;
   private conversationId = '';
 
+  getClient(): KarisClient {
+    return this.client;
+  }
+
   constructor(options: RemoteAgentOptions) {
     this.client = new KarisClient({
       apiKey: options.apiKey,
@@ -74,6 +78,8 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
   async *streamChat(
     messages: ChatMessage[],
     onChunk?: (chunk: StreamChunk) => void,
+    skillHint?: string,
+    toolHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     if (!(await this.isAvailable())) {
       const chunk: StreamChunk = {
@@ -94,7 +100,7 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     }
 
     try {
-      yield* this.streamWithConversationRecovery(lastUserMessage.content, onChunk);
+      yield* this.streamWithConversationRecovery(lastUserMessage.content, onChunk, skillHint, toolHint);
     } catch (error) {
       const message =
         error instanceof KarisApiError
@@ -150,6 +156,17 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
           result: String(event.data?.result ?? ''),
           latency_ms: typeof event.data?.latency_ms === 'number' ? event.data.latency_ms : undefined,
         };
+      case 'hitl_request': {
+        const d = event.data ?? {};
+        return {
+          type: 'hitl_request',
+          hitl_id: String(d.hitl_id ?? ''),
+          hitl_type: String(d.hitl_type ?? 'confirm'),
+          prompt: d.prompt ? String(d.prompt) : undefined,
+          form_data: d.form_data as StreamChunk['form_data'],
+          auth_url: d.auth_url ? String(d.auth_url) : undefined,
+        };
+      }
       case 'done':
         return { type: 'done' };
       case 'error':
@@ -165,12 +182,14 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
   private async *streamWithConversationRecovery(
     message: string,
     onChunk?: (chunk: StreamChunk) => void,
+    skillHint?: string,
+    toolHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     const originalConversationId = this.conversationId;
     const retryableConversation = Boolean(originalConversationId);
 
     try {
-      yield* this.streamForConversation(message, onChunk);
+      yield* this.streamForConversation(message, onChunk, skillHint, toolHint);
       return;
     } catch (error) {
       if (!this.shouldRetryWithFreshConversation(error, retryableConversation)) {
@@ -179,16 +198,20 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     }
 
     this.clearConversationId();
-    yield* this.streamForConversation(message, onChunk);
+    yield* this.streamForConversation(message, onChunk, skillHint, toolHint);
   }
 
   private async *streamForConversation(
     message: string,
     onChunk?: (chunk: StreamChunk) => void,
+    skillHint?: string,
+    toolHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     const conversationId = await this.ensureConversationId();
     const stream = this.client.chat(message, {
       conversationId,
+      skillHint,
+      toolHint,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
 

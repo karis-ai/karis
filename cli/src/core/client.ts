@@ -4,13 +4,17 @@ const EXIT_AUTH = 78;
 const EXIT_RUNTIME = 1;
 
 export interface AgentEvent {
-  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error';
+  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'hitl_request';
   data?: Record<string, unknown>;
 }
 
 export interface ChatOptions {
   conversationId?: string;
   mode?: 'lite' | 'full';
+  skillHint?: string;
+  toolHint?: string;
+  toolArgs?: Record<string, unknown>;
+  direct?: boolean;
   tz?: string;
 }
 
@@ -167,6 +171,27 @@ export interface BrandCustomizations {
 export type BrandAssetsSnapshot = BrandProfile;
 
 
+export interface ToolInfo {
+  name: string;
+  description: string;
+  parameters?: Record<string, unknown>;
+  timeout?: number;
+}
+
+export interface SkillInfo {
+  slug: string;
+  description: string;
+}
+
+export interface ToolsResponse {
+  status: string;
+  data: {
+    tools: ToolInfo[];
+    skills: SkillInfo[];
+    layers: Record<string, string>;
+  };
+}
+
 export class KarisApiError extends Error {
   constructor(
     message: string,
@@ -262,6 +287,10 @@ export class KarisClient {
       conversation_id: conversationId,
     };
     if (options.mode) payload.mode_hint = options.mode;
+    if (options.skillHint) payload.skill_hint = options.skillHint;
+    if (options.toolHint) payload.tool_hint = options.toolHint;
+    if (options.toolArgs) payload.tool_args = options.toolArgs;
+    if (options.direct) payload.direct = true;
     if (options.tz) payload.tz = options.tz;
 
     const connectController = new AbortController();
@@ -365,6 +394,68 @@ export class KarisClient {
     if (!response.ok) {
       throw this.buildError(response.status, await this.extractMessage(response));
     }
+  }
+
+  async respondHitl(
+    conversationId: string,
+    hitlId: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    const url = `${this.apiUrl}/api/v1/agent/convs/${conversationId}/hitl`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({ hitl_id: hitlId, payload }),
+    });
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+  }
+
+  async toolDirect(
+    toolName: string,
+    args: Record<string, unknown>,
+    conversationId?: string,
+  ): Promise<unknown> {
+    const convId = conversationId ?? crypto.randomUUID();
+    const url = `${this.apiUrl}/api/v1/agent/convs/${convId}/message`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        tool_hint: toolName,
+        tool_args: args,
+        direct: true,
+        conversation_id: convId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    return response.json();
+  }
+
+  async listTools(): Promise<ToolsResponse> {
+    const url = `${this.apiUrl}/api/v1/agent/tools`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    return response.json() as Promise<ToolsResponse>;
   }
 
   // --- Brand Assets API ---
@@ -759,6 +850,19 @@ export class KarisClient {
         return { type: 'tool_start', data: { tool: data.tool, title: data.title, args: data.args } };
       case 'tool_end':
         return { type: 'tool_end', data: { tool: data.tool, result: data.result_summary, latency_ms: data.latency_ms } };
+      case 'hitl_request':
+        return {
+          type: 'hitl_request',
+          data: {
+            hitl_id: data.hitl_id,
+            hitl_type: data.type,
+            prompt: data.prompt,
+            form_data: data.form_data,
+            options: data.options,
+            auth_url: (data.form_data as Record<string, unknown>)?.authUrl
+              ?? (data.form_data as Record<string, unknown>)?.auth_url,
+          },
+        };
       case 'error':
         return { type: 'error', data: { message: data.message, recoverable: data.recoverable } };
       default:

@@ -46,9 +46,15 @@ Analyzes your website's technical readiness and content quality for AI search.
 
 **Key metrics:** GEO Score (0-100) across 5 dimensions.
 
-### Mode 3: Full Audit
+### Mode 3: Content Strategy
 
-Runs both. Recommended for first-time users.
+**Question:** "What content should I create to improve my AI search presence?"
+
+Analyzes topic clusters, identifies content gaps, develops content pillars with AI citation potential.
+
+### Mode 4: Full Audit
+
+Runs Visibility + Site + Content Strategy. Recommended for first-time users.
 
 ---
 
@@ -75,7 +81,7 @@ npx karis brand init <domain>
 ### Step 2: Execute Visibility Audit
 
 ```bash
-npx karis chat "Run a GEO visibility audit for my brand. Include:
+npx karis chat --skill aeo-geo "Run a GEO visibility audit for my brand. Include:
 - Answer Share (% of AI responses mentioning my brand)
 - Citation Rate (% citing my website)
 - Mention Position (where I appear in responses)
@@ -130,7 +136,7 @@ npx karis brand show
 ### Step 2: Execute Site Audit
 
 ```bash
-npx karis chat "Run a GEO site audit for [domain]. Analyze:
+npx karis chat --skill aeo-geo "Run a GEO site audit for [domain]. Analyze:
 - AI crawler accessibility (robots.txt, llms.txt, sitemap)
 - Content structure (headings, depth, scannability)
 - Semantic relevance (keyword coverage, topical depth)
@@ -181,14 +187,75 @@ Calculate a GEO Score (0-100) and provide prioritized improvements."
 
 ---
 
-## Mode 3: Full Audit
+## Mode 3: Content Strategy
 
-Run both audits together:
+```
+Task Progress:
+- [ ] Step 1: Load brand context
+- [ ] Step 2: Execute content strategy analysis
+- [ ] Step 3: Present topic clusters and content plan
+```
+
+### Step 1: Load Brand Context
 
 ```bash
-npx karis chat "Run a full GEO audit for [brand/domain]. Include both:
+npx karis brand show
+```
+
+### Step 2: Execute Content Strategy Analysis
+
+```bash
+npx karis chat --skill aeo-geo "Analyze content strategy for [domain] for AI search optimization. Include:
+- Map all major content (product, blog, docs, case studies)
+- Identify 3-7 topic clusters with primary keywords
+- For each cluster: existing content, content gaps, AI citation potential
+- Recommend content pillars with specific titles and formats
+- Prioritize by GEO value (which content would AI engines most likely cite)"
+```
+
+### Step 3: Present Results
+
+```markdown
+## GEO Content Strategy — [Domain]
+
+### Content Audit
+- Pages analyzed: [count]
+- Existing themes: [list]
+- Content gaps: [list]
+
+### Topic Clusters (3-7)
+
+**Cluster 1: [Name]**
+- Primary keywords: [4-6 keywords]
+- Existing content: [pages that belong]
+- Content gaps: [topics to fill]
+- AI citation potential: [high/medium/low] — [why]
+
+### Content Pillars
+
+**Pillar 1: [Specific Title]**
+- Focus: [aspect addressed]
+- Sub-topics: [3-5 supporting pieces]
+- GEO value: [why AI would cite this]
+- Format: [guide/comparison/FAQ/how-to]
+
+### Strategic Recommendations (Prioritized)
+1. [Specific content to create]
+2. [Structural improvement]
+3. [Competitive positioning content]
+```
+
+---
+
+## Mode 4: Full Audit
+
+Run all three audits together:
+
+```bash
+npx karis chat --skill aeo-geo "Run a full GEO audit for [brand/domain]. Include:
 1. Visibility audit — Am I being mentioned by AI search engines?
 2. Site audit — Is my website optimized for AI engines?
+3. Content strategy — What content should I create?
 Provide a combined report with overall score and action plan."
 ```
 
@@ -205,6 +272,11 @@ Provide a combined report with overall score and action plan."
 ### Part 2: Site Readiness
 - GEO Score: XX/100
 - Top issue: [biggest problem]
+
+### Part 3: Content Strategy
+- Topic clusters: X identified
+- Content gaps: X topics to fill
+- Top priority: [highest-impact content to create]
 
 ### Combined Action Plan
 1. [Highest impact action]
@@ -270,6 +342,35 @@ Provide a combined report with overall score and action plan."
 3. **Fix crawlers first** — If AI can't reach your site, nothing else matters
 4. **Focus on gaps** — Topics where competitors appear but you don't
 5. **Re-audit monthly** — Track progress over time
+
+## Quality Checklist
+
+### Visibility Audit
+- [ ] Brand context loaded (brand profile or user input)
+- [ ] 10-20 test prompts generated from topic clusters
+- [ ] All 5 visibility metrics measured (Answer Share, Citation Rate, Mention Position, Sentiment, Gap Topics)
+- [ ] Gap topics identified (where competitors appear but brand doesn't)
+- [ ] 3 prioritized recommendations provided
+
+### Site Audit
+- [ ] AI crawler config checked (robots.txt, llms.txt, sitemap)
+- [ ] All 5 categories scored with rationale
+- [ ] Overall score calculated correctly
+- [ ] High/Medium priority improvements listed
+
+### Content Strategy
+- [ ] 3-7 topic clusters identified with 4-6 keywords each
+- [ ] Content pillars with specific recommendations
+- [ ] GEO value explained for each pillar
+- [ ] 5-7 strategic recommendations prioritized
+
+## Common Pitfalls
+
+1. **Skipping AI crawler check** — Always check robots.txt and llms.txt first
+2. **Scoring too generously** — Be critical and realistic
+3. **Generic recommendations** — Be specific with content titles
+4. **Missing structured data check** — Always view page source for JSON-LD
+5. **Under-length output** — Aim for 2,500+ words in reports
 
 ## Examples
 
