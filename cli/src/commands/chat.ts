@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import * as readline from 'node:readline/promises';
 import { Writable } from 'node:stream';
 import { stdin as input, stdout as output } from 'node:process';
-import type { AgentInterface, StreamChunk } from '../core/agent-interface.js';
+import type { AgentInterface, ChatMessage, StreamChunk } from '../core/agent-interface.js';
 import { createAgent, renderChunk } from '../utils/agent-helper.js';
 import { RemoteAgent } from '../core/remote-agent.js';
 import { KarisClient } from '../core/client.js';
@@ -52,19 +52,23 @@ export function registerChatCommand(program: Command): void {
         const agent = await createAgent();
 
         if (prompt) {
-          await initializeInteractiveConversation(agent, options);
-          await runSingleTurnChat(agent, prompt, options);
+          const [, brandContext] = await Promise.all([
+            initializeInteractiveConversation(agent, options),
+            agent.getBrandContext(),
+          ]);
+          await runSingleTurnChatWithBrand(agent, prompt, options, brandContext);
           return;
         }
 
-        await initializeInteractiveConversation(agent, options);
+        const [, brandContext] = await Promise.all([
+          initializeInteractiveConversation(agent, options),
+          agent.getBrandContext(),
+        ]);
         const transcript: Array<{
           user: string;
           assistant: string;
           events: Array<{ type: string; tool?: string; error?: string; content?: string }>;
         }> = [];
-
-        const brandContext = await agent.getBrandContext();
         const promptOutput = isTextOutput() ? output : silentOutput;
 
         if (isTextOutput()) {
@@ -255,12 +259,12 @@ async function initializeInteractiveConversation(
   await setLastConversationId(conversationId);
 }
 
-async function runSingleTurnChat(
+async function runSingleTurnChatWithBrand(
   agent: AgentInterface,
   prompt: string,
   options: { conversation?: string; skill?: string; tool?: string },
+  brandContext: ChatMessage | null,
 ): Promise<void> {
-  const brandContext = await agent.getBrandContext();
   const messages = brandContext ? [brandContext] : [];
   messages.push({ role: 'user', content: prompt });
 
