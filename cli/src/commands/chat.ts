@@ -31,7 +31,7 @@ export function registerChatCommand(program: Command): void {
     .action(runCommand(async (promptParts: string[] = [], options) => {
         const prompt = promptParts.join(' ').trim();
 
-        // Layer 1: direct tool execution — bypass agent, return JSON
+        // Layer 1 (Tool Runtime): direct execution via ToolRegistry, no LLM
         if (options.tool && options.toolArgs) {
           let parsedArgs: Record<string, unknown>;
           try {

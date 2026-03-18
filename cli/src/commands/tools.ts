@@ -20,7 +20,7 @@ export function registerToolsCommand(program: Command): void {
       if (isTextOutput()) {
         if (!options.skillsOnly) {
           console.log();
-          console.log(chalk.bold.underline('Tools (Layer 1: Atomic)'));
+          console.log(chalk.bold.underline('Tools (Layer 1: Tool Runtime)'));
           console.log();
           for (const t of result.data.tools) {
             const desc = t.description ? t.description.slice(0, 80) : '';
