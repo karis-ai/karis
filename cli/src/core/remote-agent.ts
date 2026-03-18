@@ -75,6 +75,7 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     messages: ChatMessage[],
     onChunk?: (chunk: StreamChunk) => void,
     skillHint?: string,
+    toolHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     if (!(await this.isAvailable())) {
       const chunk: StreamChunk = {
@@ -95,7 +96,7 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     }
 
     try {
-      yield* this.streamWithConversationRecovery(lastUserMessage.content, onChunk, skillHint);
+      yield* this.streamWithConversationRecovery(lastUserMessage.content, onChunk, skillHint, toolHint);
     } catch (error) {
       const message =
         error instanceof KarisApiError
@@ -167,12 +168,13 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     message: string,
     onChunk?: (chunk: StreamChunk) => void,
     skillHint?: string,
+    toolHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     const originalConversationId = this.conversationId;
     const retryableConversation = Boolean(originalConversationId);
 
     try {
-      yield* this.streamForConversation(message, onChunk, skillHint);
+      yield* this.streamForConversation(message, onChunk, skillHint, toolHint);
       return;
     } catch (error) {
       if (!this.shouldRetryWithFreshConversation(error, retryableConversation)) {
@@ -181,18 +183,20 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     }
 
     this.clearConversationId();
-    yield* this.streamForConversation(message, onChunk, skillHint);
+    yield* this.streamForConversation(message, onChunk, skillHint, toolHint);
   }
 
   private async *streamForConversation(
     message: string,
     onChunk?: (chunk: StreamChunk) => void,
     skillHint?: string,
+    toolHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     const conversationId = await this.ensureConversationId();
     const stream = this.client.chat(message, {
       conversationId,
       skillHint,
+      toolHint,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
 

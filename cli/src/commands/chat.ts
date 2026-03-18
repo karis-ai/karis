@@ -6,6 +6,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import type { AgentInterface, StreamChunk } from '../core/agent-interface.js';
 import { createAgent, renderChunk } from '../utils/agent-helper.js';
 import { RemoteAgent } from '../core/remote-agent.js';
+import { KarisClient } from '../core/client.js';
 import { createUnsupportedModeError } from '../core/errors.js';
 import { isJsonLinesOutput, isJsonOutput, isTextOutput, isYamlOutput } from '../core/cli-context.js';
 import { printCommandResult, resetToolCallCounter } from '../utils/output.js';
@@ -25,9 +26,30 @@ export function registerChatCommand(program: Command): void {
     .argument('[prompt...]', 'Run a single prompt instead of interactive chat')
     .option('-c, --conversation <id>', 'Continue an existing conversation')
     .option('--skill <name>', 'Hint which skill to use, e.g. aeo-geo, reddit-listening')
+    .option('-t, --tool <name>', 'Use a specific tool, e.g. search_reddit, search_web')
+    .option('--tool-args <json>', 'JSON args for --tool (implies direct execution, returns JSON)')
     .action(runCommand(async (promptParts: string[] = [], options) => {
-        const agent = await createAgent();
         const prompt = promptParts.join(' ').trim();
+
+        // Layer 1: direct tool execution — bypass agent, return JSON
+        if (options.tool && options.toolArgs) {
+          let parsedArgs: Record<string, unknown>;
+          try {
+            parsedArgs = JSON.parse(options.toolArgs);
+          } catch {
+            throw new Error('Invalid JSON in --tool-args. Must be a valid JSON object.');
+          }
+          const client = await KarisClient.create();
+          const result = await client.toolDirect(options.tool, parsedArgs);
+          if (isTextOutput()) {
+            console.log(JSON.stringify(result, null, 2));
+          } else {
+            printCommandResult(result);
+          }
+          return;
+        }
+
+        const agent = await createAgent();
 
         if (prompt) {
           await initializeInteractiveConversation(agent, options);
@@ -159,7 +181,7 @@ export function registerChatCommand(program: Command): void {
             const events: Array<{ type: string; tool?: string; error?: string; content?: string }> = [];
 
             resetToolCallCounter();
-            for await (const chunk of agent.streamChat(messages, undefined, options.skill)) {
+            for await (const chunk of agent.streamChat(messages, undefined, options.skill, options.tool)) {
               renderChunk(chunk);
               events.push(chunk);
 
@@ -236,7 +258,7 @@ async function initializeInteractiveConversation(
 async function runSingleTurnChat(
   agent: AgentInterface,
   prompt: string,
-  options: { conversation?: string; skill?: string },
+  options: { conversation?: string; skill?: string; tool?: string },
 ): Promise<void> {
   const brandContext = await agent.getBrandContext();
   const messages = brandContext ? [brandContext] : [];
@@ -266,7 +288,7 @@ async function runSingleTurnChat(
 
   try {
     resetToolCallCounter();
-    for await (const chunk of agent.streamChat(messages, undefined, options.skill)) {
+    for await (const chunk of agent.streamChat(messages, undefined, options.skill, options.tool)) {
       renderChunk(chunk);
       chunks.push(chunk);
 
