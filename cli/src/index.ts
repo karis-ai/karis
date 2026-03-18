@@ -11,6 +11,8 @@ import { registerBrandRefreshCommand } from './commands/brand/refresh.js';
 import { registerBrandCustomizeCommand } from './commands/brand/customize.js';
 import { registerDoctorCommand } from './commands/doctor.js';
 import { registerShowCommand } from './commands/show.js';
+import { registerToolsCommand } from './commands/tools.js';
+import { registerCapabilitiesCommand } from './commands/capabilities.js';
 import { AgentFactory } from './core/agent-factory.js';
 import { RemoteAgent } from './core/remote-agent.js';
 import type { StreamChunk } from './core/agent-interface.js';
@@ -82,6 +84,8 @@ registerBrandCustomizeCommand(brandCmd);
 registerConfigCommand(program);
 registerDoctorCommand(program);
 registerShowCommand(program);
+registerToolsCommand(program);
+registerCapabilitiesCommand(program);
 
 // --- Natural language fallback ---
 
