@@ -81,13 +81,17 @@ export async function setLastConversationId(conversationId: string): Promise<voi
   await setConfigValue('last-conversation-id', conversationId);
 }
 
+let _resolvedConfigCache: ResolvedConfig | null = null;
+
 export async function loadResolvedConfig(): Promise<ResolvedConfig> {
+  if (_resolvedConfigCache) return _resolvedConfigCache;
   const config = await loadConfig();
 
-  return {
+  _resolvedConfigCache = {
     apiKey: resolveValue(process.env.KARIS_API_KEY, config['api-key']),
     apiUrl: resolveValue(process.env.KARIS_API_URL, config['base-url'], 'https://api.karis.im'),
   };
+  return _resolvedConfigCache;
 }
 
 function resolveValue(

@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import * as readline from 'node:readline/promises';
 import { Writable } from 'node:stream';
 import { stdin as input, stdout as output } from 'node:process';
-import type { AgentInterface, StreamChunk } from '../core/agent-interface.js';
+import type { AgentInterface, ChatMessage, StreamChunk } from '../core/agent-interface.js';
 import { createAgent, renderChunk } from '../utils/agent-helper.js';
 import { RemoteAgent } from '../core/remote-agent.js';
 import { KarisClient } from '../core/client.js';
@@ -12,6 +12,7 @@ import { isJsonLinesOutput, isJsonOutput, isTextOutput, isYamlOutput } from '../
 import { printCommandResult, resetToolCallCounter } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
 import { getLastConversationId, setLastConversationId } from '../utils/config.js';
+import { promptForm } from '../utils/form-prompt.js';
 
 const silentOutput = new Writable({
   write(_chunk, _encoding, callback) {
@@ -28,10 +29,11 @@ export function registerChatCommand(program: Command): void {
     .option('--skill <name>', 'Hint which skill to use, e.g. aeo-geo, reddit-listening')
     .option('-t, --tool <name>', 'Use a specific tool, e.g. search_reddit, search_web')
     .option('--tool-args <json>', 'JSON args for --tool (implies direct execution, returns JSON)')
+    .option('-y, --yes', 'Auto-confirm optional HITL forms with defaults')
     .action(runCommand(async (promptParts: string[] = [], options) => {
         const prompt = promptParts.join(' ').trim();
 
-        // Layer 1: direct tool execution — bypass agent, return JSON
+        // Layer 1 (Tool Runtime): direct execution via ToolRegistry, no LLM
         if (options.tool && options.toolArgs) {
           let parsedArgs: Record<string, unknown>;
           try {
@@ -52,19 +54,23 @@ export function registerChatCommand(program: Command): void {
         const agent = await createAgent();
 
         if (prompt) {
-          await initializeInteractiveConversation(agent, options);
-          await runSingleTurnChat(agent, prompt, options);
+          const [, brandContext] = await Promise.all([
+            initializeInteractiveConversation(agent, options),
+            agent.getBrandContext(),
+          ]);
+          await runSingleTurnChatWithBrand(agent, prompt, options, brandContext);
           return;
         }
 
-        await initializeInteractiveConversation(agent, options);
+        const [, brandContext] = await Promise.all([
+          initializeInteractiveConversation(agent, options),
+          agent.getBrandContext(),
+        ]);
         const transcript: Array<{
           user: string;
           assistant: string;
           events: Array<{ type: string; tool?: string; error?: string; content?: string }>;
         }> = [];
-
-        const brandContext = await agent.getBrandContext();
         const promptOutput = isTextOutput() ? output : silentOutput;
 
         if (isTextOutput()) {
@@ -182,6 +188,11 @@ export function registerChatCommand(program: Command): void {
 
             resetToolCallCounter();
             for await (const chunk of agent.streamChat(messages, undefined, options.skill, options.tool)) {
+              if (chunk.type === 'hitl_request' && agent instanceof RemoteAgent) {
+                await handleHitlChunk(chunk, agent, !!options.yes);
+                continue;
+              }
+
               renderChunk(chunk);
               events.push(chunk);
 
@@ -232,6 +243,43 @@ export function registerChatCommand(program: Command): void {
     }));
 }
 
+async function handleHitlChunk(
+  chunk: StreamChunk,
+  agent: RemoteAgent,
+  autoConfirm: boolean,
+): Promise<void> {
+  const conversationId = agent.getConversationId();
+  const hitlId = chunk.hitl_id;
+  if (!conversationId || !hitlId) return;
+
+  const client = agent.getClient();
+
+  if (chunk.hitl_type === 'auth' && chunk.auth_url) {
+    if (isTextOutput()) {
+      console.log(chalk.yellow(`\n◆ Authorization required`));
+      console.log(chalk.dim(`  Opening browser: ${chunk.auth_url}`));
+    }
+    try {
+      const openModule = await import('open');
+      await openModule.default(chunk.auth_url);
+    } catch {
+      if (isTextOutput()) {
+        console.log(chalk.dim(`  Could not open browser. Please visit the URL manually.`));
+      }
+    }
+    return;
+  }
+
+  if (chunk.form_data) {
+    const nonTty = !process.stdin.isTTY;
+    const payload = await promptForm(chunk.form_data, autoConfirm || nonTty);
+    await client.respondHitl(conversationId, hitlId, payload);
+    if (isTextOutput()) {
+      console.log();
+    }
+  }
+}
+
 async function initializeInteractiveConversation(
   agent: AgentInterface,
   options: { conversation?: string },
@@ -255,12 +303,12 @@ async function initializeInteractiveConversation(
   await setLastConversationId(conversationId);
 }
 
-async function runSingleTurnChat(
+async function runSingleTurnChatWithBrand(
   agent: AgentInterface,
   prompt: string,
-  options: { conversation?: string; skill?: string; tool?: string },
+  options: { conversation?: string; skill?: string; tool?: string; yes?: boolean },
+  brandContext: ChatMessage | null,
 ): Promise<void> {
-  const brandContext = await agent.getBrandContext();
   const messages = brandContext ? [brandContext] : [];
   messages.push({ role: 'user', content: prompt });
 
@@ -289,6 +337,11 @@ async function runSingleTurnChat(
   try {
     resetToolCallCounter();
     for await (const chunk of agent.streamChat(messages, undefined, options.skill, options.tool)) {
+      if (chunk.type === 'hitl_request' && agent instanceof RemoteAgent) {
+        await handleHitlChunk(chunk, agent, !!options.yes);
+        continue;
+      }
+
       renderChunk(chunk);
       chunks.push(chunk);
 

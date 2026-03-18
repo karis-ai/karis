@@ -8,7 +8,17 @@ metadata: {"api_base":"https://api.karis.im","github":"https://github.com/karis-
 
 # Karis
 
-The open-source CMO for AI agents. Brand analysis, AI search optimization, Reddit growth, viral launch, and SEO — all from your terminal or agent.
+First CMO for AI Agents. Brand analysis, AI search optimization, Reddit growth, viral launch, and SEO — all from your terminal or agent.
+
+## Architecture — Layer Cake
+
+Karis exposes three tiers of capability:
+
+| Layer | What | How |
+|-------|------|-----|
+| **Layer 1 — Tool Runtime** | Atomic read-only operations (search, fetch, list) | `karis <namespace> <action>` or `tool_hint` + `direct=true` — direct execution, JSON, no LLM |
+| **Layer 2 — Domain Agent** | Skills with strategy (brand audit, reddit growth) | `karis chat --skill <name>` or `skill_hint` — LLM-powered, SSE stream |
+| **Layer 3 — CMO Orchestrator** | Multi-channel strategic planning | `karis chat` — free-form, full agent reasoning |
 
 ## Skill Files
 
@@ -73,7 +83,24 @@ npx karis chat
 # → Interactive CMO session with marketing intelligence
 ```
 
-### 3. Single-turn queries
+### 3. Tool Commands (Layer 1)
+
+```bash
+npx karis web search "AI coding tools"
+npx karis reddit search "AI agents" --subreddit SaaS
+npx karis x tweets elonmusk
+npx karis geo data --domain mybrand.com
+```
+
+### 4. Skill-guided Chat (Layer 2)
+
+```bash
+npx karis chat --skill brand-intel "Analyze my brand"
+npx karis chat --skill aeo-geo "Audit AI search visibility"
+npx karis chat --skill reddit-growth "Write Reddit posts"
+```
+
+### 5. Single-turn queries (Layer 3)
 
 ```bash
 npx karis chat "Audit my brand's AI search visibility"
@@ -81,7 +108,7 @@ npx karis chat "Find Reddit content opportunities for my brand"
 npx karis chat "Write a viral tweet for X"
 ```
 
-### 4. Brand management
+### 6. Brand management
 
 ```bash
 npx karis brand init mybrand.com     # Create brand profile
@@ -150,15 +177,19 @@ Karis CLI auto-detects TTY and switches output format:
 
 | Context | Default Output | Override |
 |---------|---------------|----------|
-| Terminal (interactive) | Colored text | `--json`, `--yaml`, `--jsonl` |
+| Terminal (interactive) | Table (tool cmds) / Colored text (chat) | `-f json`, `--json`, `--yaml` |
 | Piped / non-TTY | YAML | `OUTPUT=json`, `OUTPUT=text` |
 | AI agent calling CLI | YAML (clean, parseable) | `--json`, `--compact` |
 
 ```bash
-# Human-friendly colored output
-npx karis brand show
+# Unified -f flag (recommended)
+npx karis reddit search "AI" -f table   # Table (default in TTY)
+npx karis reddit search "AI" -f json    # JSON
+npx karis reddit search "AI" -f yaml    # YAML
+npx karis reddit search "AI" -f csv     # CSV
+npx karis reddit search "AI" -f md      # Markdown table
 
-# Structured for scripts
+# Legacy flags (still supported)
 npx karis brand show --json
 npx karis brand show --yaml
 npx karis brand show --jsonl
@@ -476,12 +507,39 @@ curl -X POST https://api.karis.im/api/v1/agent/conversation \
   -H "Content-Type: application/json" \
   -d '{}'
 
-# Send message (SSE stream response)
+# Send message (SSE stream response — Layer 3)
 curl -X POST https://api.karis.im/api/v1/agent/convs/<conversation_id>/message \
   -H "Authorization: Bearer $KARIS_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"message":"Analyze my brand","conversation_id":"<id>"}'
 
+# Skill-guided message (Layer 2)
+curl -X POST https://api.karis.im/api/v1/agent/convs/<conversation_id>/message \
+  -H "Authorization: Bearer $KARIS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Audit my brand","skill_hint":"aeo-geo","conversation_id":"<id>"}'
+
+# Direct tool execution (Layer 1 — JSON response, no LLM)
+curl -X POST https://api.karis.im/api/v1/agent/convs/<conversation_id>/message \
+  -H "Authorization: Bearer $KARIS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tool_hint":"search_web","tool_args":{"query":"AI agents"},"direct":true,"conversation_id":"<id>"}'
+```
+
+#### Chat Request Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `message` | string | User message (required for Layer 2/3) |
+| `conversation_id` | string | Conversation ID |
+| `skill_hint` | string | Route to a specific skill (Layer 2) |
+| `tool_hint` | string | Hint or directly call a specific tool |
+| `tool_args` | object | Arguments for the tool (used with `tool_hint`) |
+| `direct` | boolean | If `true` + `tool_hint`, bypasses LLM — direct Layer 1 execution |
+| `mode_hint` | string | `"lite"` or `"full"` — route to specific agent backend |
+| `tz` | string | Client timezone (e.g. `"America/New_York"`) |
+
+```bash
 # Get conversation history
 curl https://api.karis.im/api/v1/agent/convs/<conversation_id>/history \
   -H "Authorization: Bearer $KARIS_API_KEY"
@@ -490,6 +548,16 @@ curl https://api.karis.im/api/v1/agent/convs/<conversation_id>/history \
 curl -X POST https://api.karis.im/api/v1/agent/convs/<conversation_id>/interrupt \
   -H "Authorization: Bearer $KARIS_API_KEY"
 ```
+
+### Tools Discovery
+
+```bash
+# List all available tools and skills
+curl https://api.karis.im/api/v1/agent/tools \
+  -H "Authorization: Bearer $KARIS_API_KEY"
+```
+
+Returns tools (Layer 1), skills (Layer 2), and layer definitions.
 
 ### SSE Event Types
 
@@ -561,14 +629,33 @@ List commands save a short index — reference items by number: `npx karis show 
 ## Quick Reference
 
 ```bash
+# Setup
 npx karis setup                  # First-time wizard
+npx karis doctor                 # Verify environment
+
+# Tool commands (Layer 1)
+npx karis web search "AI tools"  # Search the web
+npx karis reddit posts SaaS      # Browse subreddit
+npx karis x tweets elonmusk      # Get user tweets
+npx karis geo data               # GEO visibility
+
+# Agent chat (Layer 2/3)
 npx karis chat "your prompt"     # Single-turn query
+npx karis chat --skill aeo-geo "audit" # Skill-guided
 npx karis chat -c <id>           # Continue conversation
+
+# Brand management
 npx karis brand init <domain>    # Create brand profile
 npx karis brand show             # View current profile
-npx karis --json <command>       # Structured JSON output
-npx karis --jsonl chat "..."     # JSONL streaming
-npx karis doctor                 # Verify environment
+
+# Output
+npx karis reddit search "AI" -f json   # JSON output
+npx karis --json <command>             # Legacy JSON flag
+npx karis --jsonl chat "..."           # JSONL streaming
+
+# Discovery
+npx karis tools list             # Available tools & skills
+npx karis capabilities           # Layer Cake overview
 ```
 
 ---

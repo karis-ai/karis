@@ -1,6 +1,6 @@
 # Karis
 
-**AI-powered marketing intelligence** for brand analysis, content strategy, and competitive research.
+**First CMO for AI Agents** — marketing intelligence as CLI tools, agent skills, and strategic orchestration.
 
 ---
 
@@ -32,78 +32,134 @@ Point your agent to `agents/AGENTS.md` for skill descriptions.
 
 ---
 
-## What is Karis?
+## Architecture — Layer Cake
 
-Karis provides AI agents with marketing intelligence capabilities:
+Karis exposes three tiers of capability:
 
-- **Brand Intelligence** (`brand-intel`) - Analyze positioning and recommend growth actions
-- **AI Search Optimization** (`aeo-geo`) - Audit visibility in ChatGPT, Perplexity, Claude
-- **Reddit Listening** (`reddit-listening`) - Monitor discussions and community sentiment
-- **Reddit Growth** (`reddit-growth`) - Generate posts, comments, and engagement strategies
-- **Viral Launch** (`elonmusk-repost`) - Optimize tweets for maximum reach on X
+| Layer | What | How |
+|-------|------|-----|
+| **Layer 1 — Tool Runtime** | Atomic read-only operations (search, fetch, list) | `karis <namespace> <action>` — direct execution, JSON response, no LLM |
+| **Layer 2 — Domain Agent** | Skills with strategy (brand audit, reddit growth) | `karis chat --skill <name>` — LLM-powered, SSE stream |
+| **Layer 3 — CMO Orchestrator** | Multi-channel strategic planning | `karis chat` — free-form, full agent reasoning |
 
 ---
 
 ## Quick Start
 
-### For AI Agents (Skills)
-
-```bash
-npx skills add karis-ai/karis
-```
-
-Then ask your agent:
-- *"Analyze my brand and suggest growth actions"*
-- *"Audit my brand's AI search visibility"*
-- *"Help me go viral on X"*
-
-**How it works:** Skills teach your agent marketing workflows. Your agent executes using Karis CLI.
-
-### For Direct CLI Use
-
 ```bash
 # First-time setup
 npx karis setup
 
-# Natural language interface (primary)
+# Interactive agent chat (Layer 3)
 npx karis chat
-> "Audit my brand's AI search visibility"
-> "Find content opportunities for mybrand.com"
 
-# Brand management
-npx karis brand init mybrand.com
-npx karis brand show
+# Direct tool calls (Layer 1)
+npx karis web search "AI coding tools"
+npx karis reddit search "AI agents" --subreddit SaaS
+npx karis x tweets elonmusk
 
-# Utilities
-npx karis doctor
-npx karis config list
+# Skill-guided chat (Layer 2)
+npx karis chat --skill brand-intel "Analyze my brand"
+npx karis chat --skill aeo-geo "Audit AI search visibility"
 ```
-
----
-
-## Available Skills
-
-See [agents/AGENTS.md](agents/AGENTS.md) for the complete list of marketing intelligence skills.
-
----
-
-## Prerequisites
-
-- **Karis API key** - Get from [karis.im](https://karis.im)
-- **Node.js 18+**
 
 ---
 
 ## CLI Commands
 
+### Tool Commands (Layer 1)
+
 ```bash
-karis setup              # First-time configuration
-karis chat               # Natural language interface (primary)
-karis brand init         # Create brand profile
-karis brand show         # View brand profile
-karis doctor             # Verify environment
-karis config             # Manage configuration
+# Web
+karis web search <query>                   # Search the web
+karis web read <url> [--focus <keyword>]   # Read a webpage
+
+# X / Twitter
+karis x search <query> [--max-results <n>] # Search X posts
+karis x tweets <username>                  # Get user's tweets
+
+# Reddit
+karis reddit search <query> [--subreddit]  # Search Reddit
+karis reddit posts <subreddit> [--sort]    # Browse a subreddit
+karis reddit comments <post_id>            # Get comment tree
+karis reddit rules <subreddit>             # Subreddit rules
+
+# YouTube
+karis youtube search <query>               # Search YouTube
+
+# Brand & GEO
+karis brand info                           # Brand profile (via tool)
+karis geo data [--domain] [--time-range]   # GEO visibility data
+
+# Utility
+karis schedule list                        # List scheduled tasks
+karis memory recall [query]                # Search saved facts
 ```
+
+### Agent Chat (Layer 2/3)
+
+```bash
+karis chat                                 # Free-form CMO agent
+karis chat --skill <name> "message"        # Skill-guided agent
+karis chat -t <tool> --tool-args '{...}'   # Escape hatch for any tool
+```
+
+### Brand Management
+
+```bash
+karis brand init <domain>                  # Create brand profile
+karis brand show                           # View brand profile
+karis brand list                           # List all brands
+karis brand select                         # Switch active brand
+karis brand customize                      # Override brand fields
+karis brand refresh                        # Refresh from source
+```
+
+### Infrastructure
+
+```bash
+karis setup                                # First-time wizard
+karis doctor                               # Verify environment
+karis config list                          # View config
+karis config set api-key sk-ka-...         # Set API key
+karis tools list                           # Discover tools & skills
+karis capabilities                         # Layer Cake overview
+```
+
+### Output Formats
+
+All commands support multiple output formats:
+
+```bash
+karis reddit search "AI" -f table          # Table (default in TTY)
+karis reddit search "AI" -f json           # JSON
+karis reddit search "AI" -f yaml           # YAML
+karis reddit search "AI" -f csv            # CSV
+karis reddit search "AI" -f md             # Markdown table
+karis reddit search "AI" --json            # Legacy JSON flag
+```
+
+---
+
+## Available Skills (Layer 2)
+
+| Skill | Description |
+|-------|-------------|
+| `brand-intel` | Analyze positioning and recommend growth actions |
+| `aeo-geo` | Audit visibility in ChatGPT, Perplexity, Claude |
+| `reddit-listening` | Monitor discussions and community sentiment |
+| `reddit-growth` | Generate posts, comments, and engagement strategies |
+| `elonmusk-repost` | Optimize tweets for maximum reach on X |
+| `page-seo` | Traditional SEO audit |
+
+See [agents/AGENTS.md](agents/AGENTS.md) for full skill documentation.
+
+---
+
+## Prerequisites
+
+- **Karis API key** — Get from [karis.im](https://karis.im)
+- **Node.js 18+**
 
 ---
 
@@ -132,8 +188,6 @@ Agent: [Uses aeo-geo skill]
 
 **Works with:** Claude Code, Cursor, Codex, Windsurf, and any agent supporting skills.
 
----
-
 ### For CLI Users
 
 The CLI connects to Karis Platform for enhanced marketing intelligence.
@@ -146,18 +200,6 @@ npx karis setup
 Interactive wizard guides you through:
 1. Configuring your Karis API key
 2. Creating your brand profile
-
-**Configuration:**
-```bash
-# Set API key
-npx karis config set api-key sk-ka-...
-
-# View config
-npx karis config list
-
-# JSON output for scripts
-npx karis --json config list
-```
 
 ---
 
@@ -178,38 +220,7 @@ Get your API key at [karis.im](https://karis.im)
 
 ---
 
-## Examples
-
-### Using Skills with Your Agent
-
-```
-You: Write a viral product launch tweet for X
-
-Agent: [Uses elonmusk-repost skill]
-       Repost Score: 74/100
-
-       Variant 1: "Built an AI that designs logos in 10 seconds..."
-       Variant 2: ...
-
-       Best time to post: 10 PM - 2 AM PT
-```
-
-### CLI Workflow
-
-```bash
-# Setup
-npx karis setup
-
-# Interactive chat
-npx karis chat
-> "What's my AI search visibility?"
-> "Find content opportunities"
-> "Compare with competitors"
-```
-
----
-
-## Configuration Files
+## Configuration
 
 Karis stores configuration globally in `~/.karis/`:
 
@@ -217,8 +228,6 @@ Karis stores configuration globally in `~/.karis/`:
 ~/.karis/
 └── config.json             # api-key and base-url
 ```
-
-Brand profiles and marketing data are managed on Karis Platform.
 
 ### Environment Variables
 
@@ -241,7 +250,7 @@ Karis is open source (MIT License). Contributions welcome!
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
@@ -252,4 +261,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Your agent now has marketing intelligence. You build, Karis grows.**
+**Your agent now has a CMO. You build, Karis grows.**

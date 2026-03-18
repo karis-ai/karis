@@ -9,27 +9,21 @@ const CAPABILITIES = {
   version: '0.1.0',
   description: 'Your AI-powered CMO — agent-first CLI for marketing automation',
   layers: {
-    atomic: {
+    tool_runtime: {
       layer: 1,
-      description: 'Direct tool execution — bypass LLM, get JSON results instantly',
+      description: 'Tool Runtime — execute via ToolRegistry, no LLM. Returns JSON.',
       usage: 'karis chat -t <tool> --tool-args \'{"key":"value"}\'',
       response: 'JSON',
     },
-    guided: {
-      layer: 1.5,
-      description: 'Agent nudged toward a specific tool — LLM reasons but prefers given tool',
-      usage: 'karis chat -t <tool> "your message"',
-      response: 'SSE stream',
-    },
-    domain: {
+    domain_agent: {
       layer: 2,
-      description: 'Skill-guided agent — LLM guided by a specific domain skill',
-      usage: 'karis chat --skill <slug> "your message"',
+      description: 'Domain Agent — Full Agent guided by skill/tool hint',
+      usage: 'karis chat --skill <slug> "message"  or  karis chat -t <tool> "message"',
       response: 'SSE stream',
     },
     cmo: {
       layer: 3,
-      description: 'Full CMO autonomy — LLM plans and executes with all tools and skills',
+      description: 'CMO — Full Agent with complete autonomy over tools and skills',
       usage: 'karis chat "your message"',
       response: 'SSE stream',
     },
@@ -39,9 +33,9 @@ const CAPABILITIES = {
       description: 'Chat with your CMO (default command)',
       options: {
         '-c, --conversation <id>': 'Continue existing conversation',
-        '--skill <name>': 'Layer 2: guide agent with a specific skill',
-        '-t, --tool <name>': 'Layer 1/1.5: use a specific tool',
-        '--tool-args <json>': 'Layer 1: JSON args for direct tool execution',
+        '--skill <name>': 'Layer 2: guide Domain Agent with a specific skill',
+        '-t, --tool <name>': 'Layer 1/2: specify a tool (with --tool-args → L1 Runtime; with message → L2 Agent)',
+        '--tool-args <json>': 'Layer 1: JSON args for Tool Runtime direct execution',
       },
     },
     'tools list': {
@@ -57,16 +51,16 @@ const CAPABILITIES = {
     capabilities: { description: 'Show this capabilities descriptor' },
   },
   examples: [
-    '# Layer 3: CMO (full autonomy)',
+    '# Layer 3 — CMO (complete autonomy)',
     'karis chat "Help me grow my SaaS product"',
     '',
-    '# Layer 2: Domain skill',
+    '# Layer 2 — Domain Agent (skill-guided)',
     'karis chat --skill reddit-growth "Write a post about my AI tool"',
     '',
-    '# Layer 1.5: Guided tool use',
+    '# Layer 2 — Domain Agent (tool-guided)',
     'karis chat -t search_reddit "Find discussions about AI agents"',
     '',
-    '# Layer 1: Atomic tool (direct execution, JSON output)',
+    '# Layer 1 — Tool Runtime (direct execution, JSON)',
     'karis chat -t search_reddit --tool-args \'{"query":"AI agents","subreddit":"SaaS"}\'',
     '',
     '# Discovery',

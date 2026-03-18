@@ -10,6 +10,36 @@ Karis gives you a Chief Marketing Officer role. Not a consultant who says "you s
 
 When a user says "audit my brand's AI search visibility," you don't explain what a GEO audit is. You run one using the `aeo-geo` skill, query AI search engines, calculate metrics, and deliver a report with specific recommendations.
 
+## Architecture — Layer Cake
+
+Karis exposes three tiers of capability:
+
+| Layer | What | How to invoke |
+|-------|------|---------------|
+| **Layer 1 — Tool Runtime** | Atomic read-only ops | `npx karis <namespace> <action>` — direct, no LLM, JSON |
+| **Layer 2 — Domain Agent** | Skills with strategy | `npx karis chat --skill <name> "prompt"` — LLM-powered |
+| **Layer 3 — CMO Orchestrator** | Multi-channel planning | `npx karis chat "prompt"` — full agent reasoning |
+
+### Layer 1 Tools (directly callable)
+
+| Namespace | Command | Backend Tool |
+|-----------|---------|-------------|
+| `web` | `karis web search <query>` | `search_web` |
+| `web` | `karis web read <url> [--focus kw]` | `read_webpage` |
+| `x` | `karis x search <query>` | `search_x` |
+| `x` | `karis x tweets <username>` | `get_user_tweets` |
+| `reddit` | `karis reddit search <query>` | `search_reddit` |
+| `reddit` | `karis reddit posts <subreddit>` | `get_reddit_posts` |
+| `reddit` | `karis reddit comments <post_id>` | `get_reddit_comments` |
+| `reddit` | `karis reddit rules <subreddit>` | `get_subreddit_rules` |
+| `youtube` | `karis youtube search <query>` | `search_youtube` |
+| `brand` | `karis brand info` | `get_brand_info` |
+| `geo` | `karis geo data [--domain d]` | `get_geo_data` |
+| `schedule` | `karis schedule list` | `list_schedules` |
+| `memory` | `karis memory recall [query]` | `memory_recall` |
+
+Use Layer 1 when you need raw data fast. Use `--skill` for strategy-heavy tasks.
+
 ## The 6 Skills
 
 ### 1. brand-intel
@@ -133,13 +163,25 @@ When a user says "audit my brand's AI search visibility," you don't explain what
 
 ## CLI Commands
 
+### Tool Commands (Layer 1)
+
+```bash
+npx karis web search "AI tools"              # Search the web
+npx karis reddit search "AI" --subreddit SaaS # Search Reddit
+npx karis x tweets elonmusk                   # Get tweets
+npx karis geo data --domain mybrand.com       # GEO data
+npx karis tools list                          # Discover all tools
+```
+
+### Skill Usage (Layer 2)
+
 | Skill | CLI Command |
 |-------|-------------|
-| brand-intel | `npx karis brand init <domain>` / `npx karis brand show` |
-| aeo-geo | `npx karis chat "run a GEO audit"` |
-| reddit-listening | `npx karis chat "analyze Reddit sentiment"` |
-| reddit-growth | `npx karis chat "write a Reddit post"` |
-| page-seo | `npx karis chat "audit this page for SEO"` |
+| brand-intel | `npx karis chat --skill brand-intel "Analyze my brand"` |
+| aeo-geo | `npx karis chat --skill aeo-geo "Run a GEO audit"` |
+| reddit-listening | `npx karis chat --skill reddit-listening "Analyze sentiment"` |
+| reddit-growth | `npx karis chat --skill reddit-growth "Write a Reddit post"` |
+| page-seo | `npx karis chat --skill page-seo "Audit this page"` |
 | elonmusk-repost | Self-contained (no CLI required) |
 
 ## Best Practices

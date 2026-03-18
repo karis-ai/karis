@@ -1,4 +1,4 @@
-export type OutputMode = 'text' | 'json' | 'jsonl' | 'yaml';
+export type OutputMode = 'text' | 'json' | 'jsonl' | 'yaml' | 'table' | 'csv' | 'md';
 
 export interface CliContext {
   outputMode: OutputMode;
@@ -43,6 +43,18 @@ export function isJsonLinesOutput(): boolean {
 
 export function isStructuredOutput(): boolean {
   return currentContext.outputMode !== 'text';
+}
+
+export function isTableOutput(): boolean {
+  return currentContext.outputMode === 'table';
+}
+
+export function isCsvOutput(): boolean {
+  return currentContext.outputMode === 'csv';
+}
+
+export function isMdOutput(): boolean {
+  return currentContext.outputMode === 'md';
 }
 
 export function isCompactOutput(): boolean {

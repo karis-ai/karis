@@ -7,8 +7,30 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface HitlFormItem {
+  type: string;
+  label: string;
+  value?: unknown;
+  default?: unknown[];
+  options?: Array<{ label: string; value: string } | string>;
+  description?: string;
+  placeholder?: string;
+}
+
+export interface HitlFormSection {
+  subtitle?: string;
+  description?: string;
+  items: HitlFormItem[];
+}
+
+export interface HitlFormData {
+  title?: string;
+  passthrough?: boolean;
+  sections?: HitlFormSection[];
+}
+
 export interface StreamChunk {
-  type: 'content' | 'tool_start' | 'tool_end' | 'error' | 'done';
+  type: 'content' | 'tool_start' | 'tool_end' | 'error' | 'done' | 'hitl_request';
   content?: string;
   tool?: string;
   title?: string;
@@ -16,6 +38,11 @@ export interface StreamChunk {
   result?: string;
   latency_ms?: number;
   error?: string;
+  hitl_id?: string;
+  hitl_type?: string;
+  form_data?: HitlFormData;
+  prompt?: string;
+  auth_url?: string;
 }
 
 export type AgentMode = 'remote';

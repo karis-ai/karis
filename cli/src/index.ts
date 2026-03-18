@@ -9,16 +9,45 @@ import { registerBrandListCommand } from './commands/brand/list.js';
 import { registerBrandSelectCommand } from './commands/brand/select.js';
 import { registerBrandRefreshCommand } from './commands/brand/refresh.js';
 import { registerBrandCustomizeCommand } from './commands/brand/customize.js';
+import { registerBrandInfoCommand } from './commands/brand/info.js';
 import { registerDoctorCommand } from './commands/doctor.js';
 import { registerShowCommand } from './commands/show.js';
 import { registerToolsCommand } from './commands/tools.js';
 import { registerCapabilitiesCommand } from './commands/capabilities.js';
+import { registerWebCommand } from './commands/web.js';
+import { registerXCommand } from './commands/x.js';
+import { registerRedditCommand } from './commands/reddit.js';
+import { registerYoutubeCommand } from './commands/youtube.js';
+import { registerGeoCommand } from './commands/geo.js';
+import { registerScheduleCommand } from './commands/schedule.js';
+import { registerMemoryCommand } from './commands/memory.js';
 import { AgentFactory } from './core/agent-factory.js';
 import { RemoteAgent } from './core/remote-agent.js';
 import type { StreamChunk } from './core/agent-interface.js';
+import type { OutputMode } from './core/cli-context.js';
 import { isJsonOutput, isTextOutput, isYamlOutput, setCliContext } from './core/cli-context.js';
 import { printCommandError, printCommandResult, renderStreamChunk, resetToolCallCounter } from './utils/output.js';
 import { createAuthRequiredError } from './core/errors.js';
+
+const FORMAT_ALIASES: Record<string, OutputMode> = {
+  text: 'text', table: 'table', json: 'json', yaml: 'yaml', csv: 'csv', md: 'md',
+  jsonl: 'jsonl', markdown: 'md',
+};
+
+function resolveOutputMode(opts: Record<string, unknown>): OutputMode {
+  if (opts.format && typeof opts.format === 'string') {
+    const mapped = FORMAT_ALIASES[opts.format.toLowerCase()];
+    if (mapped) return mapped;
+  }
+  if (opts.jsonl) return 'jsonl';
+  if (opts.json) return 'json';
+  if (opts.yaml) return 'yaml';
+
+  const envOutput = process.env.OUTPUT?.toLowerCase();
+  if (envOutput && FORMAT_ALIASES[envOutput]) return FORMAT_ALIASES[envOutput];
+  if (!process.stdout.isTTY) return 'yaml';
+  return 'text';
+}
 
 const program = new Command();
 
@@ -29,33 +58,14 @@ program
   .option('--json', 'Emit structured JSON output')
   .option('--jsonl', 'Emit newline-delimited JSON events')
   .option('--yaml', 'Emit YAML output')
+  .option('-f, --format <fmt>', 'Output format: table, json, yaml, csv, md')
   .option('--compact', 'Strip meta fields from structured output');
 
 program.hook('preAction', (_thisCommand, actionCommand) => {
   const globalOptions = actionCommand.optsWithGlobals();
 
-  // Output mode priority: flags > OUTPUT env > TTY auto-detection
-  let outputMode: 'text' | 'json' | 'jsonl' | 'yaml';
-  if (globalOptions.jsonl) {
-    outputMode = 'jsonl';
-  } else if (globalOptions.json) {
-    outputMode = 'json';
-  } else if (globalOptions.yaml) {
-    outputMode = 'yaml';
-  } else {
-    const envOutput = process.env.OUTPUT?.toLowerCase();
-    if (envOutput === 'json') {
-      outputMode = 'json';
-    } else if (envOutput === 'jsonl') {
-      outputMode = 'jsonl';
-    } else if (envOutput === 'yaml') {
-      outputMode = 'yaml';
-    } else if (!process.stdout.isTTY) {
-      outputMode = 'yaml';
-    } else {
-      outputMode = 'text';
-    }
-  }
+  // Output mode priority: -f flag > legacy flags > OUTPUT env > TTY auto-detection
+  const outputMode = resolveOutputMode(globalOptions);
 
   setCliContext({
     outputMode,
@@ -78,6 +88,17 @@ registerBrandListCommand(brandCmd);
 registerBrandSelectCommand(brandCmd);
 registerBrandRefreshCommand(brandCmd);
 registerBrandCustomizeCommand(brandCmd);
+registerBrandInfoCommand(brandCmd);
+
+// --- Site-namespaced tool commands (Layer 1) ---
+
+registerWebCommand(program);
+registerXCommand(program);
+registerRedditCommand(program);
+registerYoutubeCommand(program);
+registerGeoCommand(program);
+registerScheduleCommand(program);
+registerMemoryCommand(program);
 
 // --- Infrastructure ---
 
@@ -92,29 +113,8 @@ registerCapabilitiesCommand(program);
 program.on('command:*', async (operands: string[]) => {
   const input = operands.join(' ');
 
-  // Apply same output mode detection for fallback handler (no preAction hook)
   const globalOptions = program.opts();
-  let outputMode: 'text' | 'json' | 'jsonl' | 'yaml';
-  if (globalOptions.jsonl) {
-    outputMode = 'jsonl';
-  } else if (globalOptions.json) {
-    outputMode = 'json';
-  } else if (globalOptions.yaml) {
-    outputMode = 'yaml';
-  } else {
-    const envOutput = process.env.OUTPUT?.toLowerCase();
-    if (envOutput === 'json') {
-      outputMode = 'json';
-    } else if (envOutput === 'jsonl') {
-      outputMode = 'jsonl';
-    } else if (envOutput === 'yaml') {
-      outputMode = 'yaml';
-    } else if (!process.stdout.isTTY) {
-      outputMode = 'yaml';
-    } else {
-      outputMode = 'text';
-    }
-  }
+  const outputMode = resolveOutputMode(globalOptions);
 
   setCliContext({
     outputMode,
