@@ -29,9 +29,9 @@ export function createAuthRequiredError(): CliError {
     code: 'AUTH_REQUIRED',
     exitCode: 78,
     nextSteps: [
-      'Run `npx karis config set api-key <your-key>` to configure your API key',
+      'Run `karis login` to authenticate',
+      'Or set your key directly: `karis config set api-key <your-key>`',
       'Or use the `KARIS_API_KEY` environment variable',
-      'Get an API key at https://karis.im/settings/api-keys',
     ],
   });
 }
@@ -94,11 +94,18 @@ export function normalizeError(error: unknown): CliError {
 function nextStepsForApiCode(code: string): string[] {
   switch (code) {
     case 'INVALID_KEY':
+      return [
+        'Run `karis login` to re-authenticate',
+        'Or set a valid key: `karis config set api-key <your-key>`',
+      ];
     case 'KEY_EXPIRED':
+      return [
+        'Run `karis login` to get a new key',
+      ];
     case 'KEY_DISABLED':
       return [
-        'Check whether the current API key is valid and still active',
-        'Create or re-enable an API key at https://karis.im/settings/api-keys',
+        'Run `karis login` to re-authenticate',
+        'Or re-enable your key at https://karis.im/settings/api-keys',
       ];
     case 'INSUFFICIENT_CREDITS':
       return [

@@ -895,7 +895,7 @@ export class KarisClient {
     if (status === 401) {
       if (/revoked|disabled/i.test(msg) && !/invalid/i.test(msg)) {
         return new KarisApiError(
-          'API key has been disabled. Enable it at https://karis.im/settings/api-keys',
+          'API key has been disabled. Run `karis login` to re-authenticate.',
           'KEY_DISABLED',
           status,
           EXIT_AUTH,
@@ -903,14 +903,14 @@ export class KarisClient {
       }
       if (/\bexpired\b/i.test(msg) && !/invalid/i.test(msg)) {
         return new KarisApiError(
-          'API key has expired. Create a new key at https://karis.im/settings/api-keys',
+          'API key has expired. Run `karis login` to get a new key.',
           'KEY_EXPIRED',
           status,
           EXIT_AUTH,
         );
       }
       return new KarisApiError(
-        'Invalid API key. Check your key or create a new one at https://karis.im/settings/api-keys',
+        'Invalid API key. Run `karis login` to re-authenticate.',
         'INVALID_KEY',
         status,
         EXIT_AUTH,

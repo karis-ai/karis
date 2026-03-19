@@ -30,6 +30,7 @@ import type { OutputMode } from './core/cli-context.js';
 import { isJsonOutput, isTextOutput, isYamlOutput, setCliContext } from './core/cli-context.js';
 import { printCommandError, printCommandResult, renderStreamChunk, resetToolCallCounter } from './utils/output.js';
 import { createAuthRequiredError } from './core/errors.js';
+import { autoLogin } from './core/auth.js';
 
 const FORMAT_ALIASES: Record<string, OutputMode> = {
   text: 'text', table: 'table', json: 'json', yaml: 'yaml', csv: 'csv', md: 'md',
@@ -126,10 +127,21 @@ program.on('command:*', async (operands: string[]) => {
     compact: globalOptions.compact === true,
   });
 
-  const agent = await AgentFactory.create();
+  let agent = await AgentFactory.create();
 
   if (!(await agent.isAvailable())) {
-    printCommandError(createAuthRequiredError());
+    if (process.stdout.isTTY) {
+      const loggedIn = await autoLogin();
+      if (!loggedIn) {
+        printCommandError(createAuthRequiredError());
+        return;
+      }
+      // Recreate agent so it picks up the newly saved API key
+      agent = await AgentFactory.create();
+    } else {
+      printCommandError(createAuthRequiredError());
+      return;
+    }
   }
 
   const brandContext = await agent.getBrandContext();
