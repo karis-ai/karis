@@ -22,6 +22,7 @@ import { registerYoutubeCommand } from './commands/youtube.js';
 import { registerGeoCommand } from './commands/geo.js';
 import { registerScheduleCommand } from './commands/schedule.js';
 import { registerMemoryCommand } from './commands/memory.js';
+import { registerInfluencerCommand } from './commands/influencer.js';
 import { AgentFactory } from './core/agent-factory.js';
 import { RemoteAgent } from './core/remote-agent.js';
 import type { StreamChunk } from './core/agent-interface.js';
@@ -101,6 +102,7 @@ registerYoutubeCommand(program);
 registerGeoCommand(program);
 registerScheduleCommand(program);
 registerMemoryCommand(program);
+registerInfluencerCommand(program);
 
 // --- Infrastructure ---
 
