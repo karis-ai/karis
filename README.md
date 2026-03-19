@@ -98,6 +98,13 @@ karis reddit rules <subreddit>             # Subreddit rules
 # YouTube
 karis youtube search <query>               # Search YouTube
 
+# Influencer Search
+karis influencer search --keywords "fitness,workout" --platform instagram
+karis influencer search --keywords "tech" --min-followers 100000 --max-followers 1000000
+karis influencer results --record-id <id>              # Browse page 1
+karis influencer results --record-id <id> --session-id <sid> --page 2  # Paginate
+karis influencer list                                  # List recent searches
+
 # Brand & GEO
 karis brand info                           # Brand profile (via tool)
 karis geo data [--domain] [--time-range]   # GEO visibility data

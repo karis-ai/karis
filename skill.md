@@ -90,6 +90,12 @@ karis web search "AI coding tools"
 karis reddit search "AI agents" --subreddit SaaS
 karis x tweets elonmusk
 karis geo data --domain mybrand.com
+
+# Influencer search (direct API, no LLM)
+karis influencer search --keywords "fitness,workout" --platform instagram \
+  --min-followers 50000 --max-followers 500000
+karis influencer results --record-id <id>           # page 1
+karis influencer list                               # recent searches
 ```
 
 ### 4. Skill-guided Chat (Layer 2)
@@ -247,6 +253,58 @@ Each line is a JSON object:
 {"schema_version":"1","command":"chat","type":"tool_end","tool":"web_search","latency_ms":1900}
 {"schema_version":"1","command":"chat","type":"content","content":"Based on my analysis..."}
 {"schema_version":"1","command":"chat","type":"done"}
+```
+
+---
+
+## Influencer Search (Layer 1)
+
+Find creators directly — no agent, no HITL, instant results.
+
+```bash
+# Search Instagram fitness influencers 50k-500k followers
+karis influencer search \
+  --keywords "fitness,workout,gym" \
+  --platform instagram \
+  --min-followers 50000 \
+  --max-followers 500000
+
+# Search TikTok tech creators
+karis influencer search --keywords "AI,tech,startup" --platform tiktok
+
+# Browse results (page 1 creates a session)
+karis influencer results --record-id 019d05e2-...
+
+# Paginate (use session-id from page 1)
+karis influencer results \
+  --record-id 019d05e2-... \
+  --session-id <sid> \
+  --page 2
+
+# List recent searches
+karis influencer list
+
+# Pipe to jq for scripting
+karis influencer search --keywords "fitness" -f json | jq '.influencers[].username'
+```
+
+**Options for `influencer search`:**
+
+| Flag | Description |
+|------|-------------|
+| `--keywords` | Comma-separated keywords (required) |
+| `--platform` | `instagram` \| `tiktok` \| `youtube` \| `twitter` (default: instagram) |
+| `--min-followers` | Minimum follower count |
+| `--max-followers` | Maximum follower count |
+| `--min-engagement` | Minimum engagement rate (0-1, e.g. `0.03` = 3%) |
+| `--location` | Comma-separated country codes, e.g. `US,GB` |
+| `--language` | Language code, e.g. `en` |
+| `--count` | Results per page (default: 20) |
+
+For deeper influencer workflows (automated HITL forms, multi-platform search, evaluation), use the agent:
+
+```bash
+karis chat "Find fitness influencers on Instagram for my brand"
 ```
 
 ---
@@ -638,6 +696,11 @@ karis web search "AI tools"  # Search the web
 karis reddit posts SaaS      # Browse subreddit
 karis x tweets elonmusk      # Get user tweets
 karis geo data               # GEO visibility
+
+# Influencer search (Layer 1 — direct API)
+karis influencer search --keywords "fitness" --platform instagram
+karis influencer results --record-id <id>  # browse results
+karis influencer list                      # recent searches
 
 # Agent chat (Layer 2/3)
 karis chat "your prompt"     # Single-turn query
