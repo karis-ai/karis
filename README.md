@@ -2,6 +2,8 @@
 
 **First CMO for AI Agents** — marketing intelligence as CLI tools, agent skills, and strategic orchestration.
 
+![Karis Demo](assets/demo.gif)
+
 ---
 
 ## Installation
