@@ -89,7 +89,7 @@ export async function runBrandShow(): Promise<void> {
       console.log();
       console.log(`  ${chalk.dim('Competitors:')}`);
       for (const comp of profile.competitors) {
-        console.log(`    ${chalk.cyan('•')} ${comp.name.padEnd(20)} ${chalk.dim(comp.domain)}`);
+        console.log(`    ${chalk.cyan('•')} ${(comp.name ?? '').padEnd(20)} ${chalk.dim(comp.domain ?? '')}`);
       }
     }
 
@@ -107,7 +107,9 @@ export async function runBrandShow(): Promise<void> {
       console.log();
       console.log(`  ${chalk.dim('Brand Colors:')}`);
       profile.colors.slice(0, 5).forEach(color => {
-        console.log(`    ${chalk.hex(color.hex)('█')} ${color.hex.padEnd(10)} ${chalk.dim(color.type)}`);
+        const hex = color.hex ?? '';
+        const colorSwatch = hex ? chalk.hex(hex)('█') : '█';
+        console.log(`    ${colorSwatch} ${hex.padEnd(10)} ${chalk.dim(color.type ?? '')}`);
       });
       if (profile.colors.length > 5) {
         console.log(`    ${chalk.dim(`... and ${profile.colors.length - 5} more`)}`);
@@ -127,7 +129,7 @@ export async function runBrandShow(): Promise<void> {
       console.log();
       console.log(`  ${chalk.dim('Links:')}`);
       profile.links.slice(0, 5).forEach(link => {
-        console.log(`    ${chalk.cyan('•')} ${link.name.padEnd(15)} ${chalk.dim(link.url)}`);
+        console.log(`    ${chalk.cyan('•')} ${(link.name ?? '').padEnd(15)} ${chalk.dim(link.url ?? '')}`);
       });
       if (profile.links.length > 5) {
         console.log(`    ${chalk.dim(`... and ${profile.links.length - 5} more`)}`);

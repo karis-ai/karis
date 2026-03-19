@@ -12,8 +12,8 @@ function toSnakeCase(label: string): string {
 function getDefaultValue(item: HitlFormItem): unknown {
   if (item.type === 'checkbox') return item.value ?? false;
   if (item.type === 'find-keywords') {
-    const defaults = (item.default as string[]) ?? [];
-    return defaults.flatMap(d => d.split(',').map(k => k.trim())).filter(Boolean);
+    const defaults = (item.default as unknown[]) ?? [];
+    return defaults.flatMap(d => String(d).split(',').map(k => k.trim())).filter(Boolean);
   }
   const explicit = item.default?.[0] ?? item.value;
   if (explicit !== undefined && explicit !== '') return explicit;
@@ -69,8 +69,8 @@ async function promptCheckboxGroup(
 async function promptFindKeywords(
   item: HitlFormItem,
 ): Promise<string[]> {
-  const defaults = (item.default as string[]) ?? [];
-  const keywords = defaults.flatMap(d => d.split(',').map(k => k.trim())).filter(Boolean);
+  const defaults = (item.default as unknown[]) ?? [];
+  const keywords = defaults.flatMap(d => String(d).split(',').map(k => k.trim())).filter(Boolean);
 
   if (keywords.length === 0) {
     const raw = await input({ message: item.label });

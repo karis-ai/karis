@@ -145,7 +145,8 @@ async function apiPost<T>(client: KarisClient, path: string, body: unknown): Pro
     throw new Error(`API error ${res.status}${msg ? ': ' + msg : ''}`);
   }
   const j = (await res.json()) as { data?: T };
-  return j.data as T;
+  if (j.data === undefined) throw new Error('Unexpected API response: missing data field');
+  return j.data;
 }
 
 async function apiGet<T>(client: KarisClient, path: string): Promise<T> {
@@ -165,7 +166,8 @@ async function apiGet<T>(client: KarisClient, path: string): Promise<T> {
     throw new Error(`API error ${res.status}${msg ? ': ' + msg : ''}`);
   }
   const j = (await res.json()) as { data?: T };
-  return j.data as T;
+  if (j.data === undefined) throw new Error('Unexpected API response: missing data field');
+  return j.data;
 }
 
 // ─── Command ──────────────────────────────────────────────────────────────────
