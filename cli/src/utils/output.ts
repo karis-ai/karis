@@ -5,6 +5,23 @@ import type { StreamChunk } from '../core/agent-interface.js';
 
 const SCHEMA_VERSION = '1';
 
+let activeStatusLine = '';
+
+function clearStatusLine(): void {
+  if (!activeStatusLine) return;
+  process.stderr.write(`\r\x1b[2K`);
+  activeStatusLine = '';
+}
+
+function writeStatusLine(text: string): void {
+  clearStatusLine();
+  const truncated = text.length > (process.stderr.columns || 80) - 4
+    ? text.slice(0, (process.stderr.columns || 80) - 5) + '…'
+    : text;
+  activeStatusLine = truncated;
+  process.stderr.write(`\r${truncated}`);
+}
+
 export function heading(text: string): string {
   return chalk.bold.cyan(text);
 }
@@ -159,9 +176,13 @@ export function emitStructuredEvent(event: Record<string, unknown>): void {
 function renderTextChunk(chunk: StreamChunk): void {
   switch (chunk.type) {
     case 'content':
-      if (chunk.content) process.stdout.write(chunk.content);
+      if (chunk.content) {
+        clearStatusLine();
+        process.stdout.write(chunk.content);
+      }
       break;
     case 'tool_start': {
+      clearStatusLine();
       ++toolCallCounter;
       const toolName = chunk.tool ?? 'unknown';
       const hint = formatToolHint(toolName, chunk.title, chunk.args);
@@ -173,10 +194,45 @@ function renderTextChunk(chunk: StreamChunk): void {
       process.stdout.write(chalk.green(' done') + suffix + '\n');
       break;
     }
+    case 'working_summary': {
+      const text = chunk.summary_text;
+      if (text) {
+        writeStatusLine(chalk.dim(`  ◐ ${text}`));
+      }
+      break;
+    }
+    case 'progress': {
+      const steps = chunk.steps;
+      if (steps && steps.length > 0) {
+        const latest = steps[steps.length - 1];
+        if (latest?.label) {
+          writeStatusLine(chalk.dim(`  ◐ ${latest.label}`));
+        }
+      }
+      break;
+    }
+    case 'output_artifact': {
+      clearStatusLine();
+      const items = chunk.artifacts;
+      if (items && items.length > 0) {
+        process.stdout.write('\n');
+        for (const item of items) {
+          const name = item.name || 'file';
+          const url = item.url || '';
+          process.stdout.write(chalk.cyan(`  ⬡ ${name}`) + '\n');
+          if (url) {
+            process.stdout.write(chalk.dim(`    ${url}`) + '\n');
+          }
+        }
+      }
+      break;
+    }
     case 'done':
+      clearStatusLine();
       console.log('\n');
       break;
     case 'error':
+      clearStatusLine();
       printHumanError(new CliError(chunk.error ?? 'Unknown error', { code: 'STREAM_ERROR' }));
       process.exit(1);
   }

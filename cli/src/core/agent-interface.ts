@@ -29,8 +29,24 @@ export interface HitlFormData {
   sections?: HitlFormSection[];
 }
 
+export interface ArtifactItem {
+  name?: string;
+  url?: string;
+  file_id?: string;
+  file_extension?: string;
+}
+
 export interface StreamChunk {
-  type: 'content' | 'tool_start' | 'tool_end' | 'error' | 'done' | 'hitl_request';
+  type:
+    | 'content'
+    | 'tool_start'
+    | 'tool_end'
+    | 'error'
+    | 'done'
+    | 'hitl_request'
+    | 'working_summary'
+    | 'progress'
+    | 'output_artifact';
   content?: string;
   tool?: string;
   title?: string;
@@ -43,6 +59,9 @@ export interface StreamChunk {
   form_data?: HitlFormData;
   prompt?: string;
   auth_url?: string;
+  summary_text?: string;
+  steps?: Array<{ label?: string; status?: string }>;
+  artifacts?: ArtifactItem[];
 }
 
 export type AgentMode = 'remote';

@@ -167,6 +167,27 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
           auth_url: d.auth_url ? String(d.auth_url) : undefined,
         };
       }
+      case 'working_summary':
+        return { type: 'working_summary', summary_text: String(event.data?.text ?? '') };
+      case 'progress': {
+        const rawSteps = event.data?.steps;
+        const steps = Array.isArray(rawSteps)
+          ? rawSteps.map((s: Record<string, unknown>) => ({ label: String(s.label ?? ''), status: String(s.status ?? '') }))
+          : [];
+        return { type: 'progress', steps };
+      }
+      case 'output_artifact': {
+        const rawItems = event.data?.items;
+        const artifacts = Array.isArray(rawItems)
+          ? rawItems.map((item: Record<string, unknown>) => ({
+              name: item.name ? String(item.name) : undefined,
+              url: item.url ? String(item.url) : undefined,
+              file_id: item.file_id ? String(item.file_id) : undefined,
+              file_extension: item.file_extension ? String(item.file_extension) : undefined,
+            }))
+          : [];
+        return { type: 'output_artifact', artifacts };
+      }
       case 'done':
         return { type: 'done' };
       case 'error':
@@ -213,6 +234,7 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
       skillHint,
       toolHint,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      interactionMode: 'headless',
     });
 
     for await (const event of stream) {

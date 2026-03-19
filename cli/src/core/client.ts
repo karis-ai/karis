@@ -4,7 +4,7 @@ const EXIT_AUTH = 78;
 const EXIT_RUNTIME = 1;
 
 export interface AgentEvent {
-  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'hitl_request';
+  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'hitl_request' | 'working_summary' | 'progress' | 'output_artifact';
   data?: Record<string, unknown>;
 }
 
@@ -16,6 +16,7 @@ export interface ChatOptions {
   toolArgs?: Record<string, unknown>;
   direct?: boolean;
   tz?: string;
+  interactionMode?: 'interactive' | 'headless' | 'automated';
 }
 
 export interface HistoryMessage {
@@ -292,6 +293,7 @@ export class KarisClient {
     if (options.toolArgs) payload.tool_args = options.toolArgs;
     if (options.direct) payload.direct = true;
     if (options.tz) payload.tz = options.tz;
+    if (options.interactionMode) payload.interaction_mode = options.interactionMode;
 
     const connectController = new AbortController();
     const connectTimer = setTimeout(
@@ -865,6 +867,12 @@ export class KarisClient {
               ?? (data.form_data as Record<string, unknown>)?.auth_url,
           },
         };
+      case 'working_summary':
+        return { type: 'working_summary', data: { text: data.text ?? '' } };
+      case 'progress':
+        return { type: 'progress', data: { steps: data.steps, header_text: data.header_text, done: data.done } };
+      case 'output_artifact':
+        return { type: 'output_artifact', data: { items: data.items, artifact_id: data.artifact_id } };
       case 'error':
         return { type: 'error', data: { message: data.message, recoverable: data.recoverable } };
       default:
