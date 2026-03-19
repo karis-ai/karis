@@ -31,11 +31,29 @@ karis chat
 /plugin install brand-intel@karis
 ```
 
-### Cursor / Windsurf / Codex
+### Cursor / Windsurf / Codex / Any Agent (via Skills)
 
-Point your agent to `agents/AGENTS.md` for skill descriptions.
+Install all Karis capabilities as a single skill:
 
-Or add this to your agent's system prompt / rules:
+```bash
+npx skills add karis-ai/karis
+```
+
+Or install individual skills (brand intelligence, GEO audit, SEO, Reddit, etc.) separately:
+
+```bash
+npx skills add karis-ai/karis --full-depth
+```
+
+Then just ask your agent naturally:
+
+```
+"Analyze my brand for acme.com"
+"Run a GEO audit"
+"Write a Reddit post for our product launch"
+```
+
+Or point your agent to `agents/AGENTS.md` directly, or add to your system prompt / rules:
 
 ```
 Read https://karis.im/skill.md and follow instructions
