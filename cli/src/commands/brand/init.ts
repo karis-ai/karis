@@ -28,34 +28,38 @@ export async function runBrandInit(options: { domain?: string; force?: boolean }
 
   const session = new InteractiveSession();
 
-  // Check if brand already exists
-  const existing = await client.getBrand();
-  if (existing && !options.force) {
-    if (isTextOutput()) {
-      console.log(warning(`Brand profile already exists for ${chalk.bold(existing.name || existing.domain)}.`));
-    } else {
-      emitStructuredEvent({
-        type: 'status',
-        stage: 'brand_exists',
-        name: existing.name || existing.domain,
-        domain: existing.domain,
-      });
-    }
-
-    const overwrite = await session.ask('Overwrite? (y/N)', { defaultValue: 'N' });
-    if (overwrite.toLowerCase() !== 'y') {
-      session.close();
-      printCommandResult({
-        action: 'brand.init',
-        cancelled: true,
-        reason: 'overwrite_declined',
-        prompts: session.getTranscript(),
-        existing_brand: {
-          name: existing.name,
+  // If a domain was provided, check whether that specific domain already has a profile
+  if (options.domain && !options.force) {
+    const allBrands = await client.listBrands();
+    const normalizedInput = options.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
+    const existing = allBrands.find(b => b.domain?.toLowerCase() === normalizedInput);
+    if (existing) {
+      if (isTextOutput()) {
+        console.log(warning(`Brand profile already exists for ${chalk.bold(existing.name || existing.domain)}.`));
+      } else {
+        emitStructuredEvent({
+          type: 'status',
+          stage: 'brand_exists',
+          name: existing.name || existing.domain,
           domain: existing.domain,
-        },
-      });
-      return;
+        });
+      }
+
+      const overwrite = await session.ask('Re-analyze and overwrite? (y/N)', { defaultValue: 'N' });
+      if (overwrite.toLowerCase() !== 'y') {
+        session.close();
+        printCommandResult({
+          action: 'brand.init',
+          cancelled: true,
+          reason: 'overwrite_declined',
+          prompts: session.getTranscript(),
+          existing_brand: {
+            name: existing.name,
+            domain: existing.domain,
+          },
+        });
+        return;
+      }
     }
   }
 

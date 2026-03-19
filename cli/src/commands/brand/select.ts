@@ -67,7 +67,7 @@ export async function runBrandSelect(options: { brand?: string }): Promise<void>
       // Try to match by name or domain
       const match = brands.find(b =>
         b.name?.toLowerCase() === idx.toLowerCase() ||
-        b.domain.toLowerCase() === idx.toLowerCase()
+        b.domain?.toLowerCase() === idx.toLowerCase()
       );
       if (match) {
         selectedBrand = match.id;
@@ -83,7 +83,7 @@ export async function runBrandSelect(options: { brand?: string }): Promise<void>
     const match = brands.find(b =>
       b.id === input ||
       b.name?.toLowerCase() === input.toLowerCase() ||
-      b.domain.toLowerCase() === input.toLowerCase()
+      b.domain?.toLowerCase() === input.toLowerCase()
     );
     if (!match) {
       session.close();
