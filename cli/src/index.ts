@@ -115,6 +115,10 @@ registerCapabilitiesCommand(program);
 
 // --- Natural language fallback ---
 
+if (process.argv.length <= 2) {
+  process.argv.push('chat');
+}
+
 program.on('command:*', async (operands: string[]) => {
   const input = operands.join(' ');
 

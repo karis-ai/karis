@@ -1,6 +1,6 @@
 {
   "name": "@karis-ai/cli",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "The open-source CMO for AI agents",
   "bin": {
     "karis": "./bin/karis.js"

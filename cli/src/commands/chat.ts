@@ -9,7 +9,7 @@ import { RemoteAgent } from '../core/remote-agent.js';
 import { KarisClient } from '../core/client.js';
 import { createUnsupportedModeError } from '../core/errors.js';
 import { isJsonLinesOutput, isJsonOutput, isTextOutput, isYamlOutput } from '../core/cli-context.js';
-import { printCommandResult, resetToolCallCounter } from '../utils/output.js';
+import { clearAssistantStatus, printCommandResult, resetToolCallCounter, showAssistantStatus } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
 import { getLastConversationId, setLastConversationId } from '../utils/config.js';
 import { promptForm } from '../utils/form-prompt.js';
@@ -19,6 +19,64 @@ const silentOutput = new Writable({
     callback();
   },
 });
+
+const assistantWaitingFrames = ['•  ', '•• ', '•••'];
+
+function renderKarisLogo(): string {
+  const lines = [
+    '██╗  ██╗ █████╗ ██████╗ ██╗███████╗',
+    '██║ ██╔╝██╔══██╗██╔══██╗██║██╔════╝',
+    '█████╔╝ ███████║██████╔╝██║███████╗',
+    '██╔═██╗ ██╔══██║██╔══██╗██║╚════██║',
+    '██║  ██╗██║  ██║██║  ██║██║███████║',
+  ];
+
+  return lines
+    .map((line, index) => {
+      const colors = [
+        chalk.hex('#fbbf24'),
+        chalk.hex('#f59e0b'),
+        chalk.hex('#f97316'),
+        chalk.hex('#3b82f6'),
+        chalk.hex('#2563eb'),
+      ];
+      return colors[index](line);
+    })
+    .join('\n');
+}
+
+function startAssistantWaitingIndicator(): ReturnType<typeof setInterval> {
+  let frameIndex = 0;
+  const renderFrame = () => {
+    const frame = assistantWaitingFrames[frameIndex % assistantWaitingFrames.length];
+    showAssistantStatus(frame);
+    frameIndex += 1;
+  };
+
+  renderFrame();
+  const timer = setInterval(renderFrame, 120);
+  timer.unref?.();
+  return timer;
+}
+
+function stopAssistantWaitingIndicator(
+  timer: ReturnType<typeof setInterval> | null,
+  options: { showLabel?: boolean; clearStatus?: boolean } = {},
+): null {
+  if (timer) {
+    clearInterval(timer);
+  }
+
+  if (options.clearStatus !== false) {
+    clearAssistantStatus();
+  }
+
+  if (options.showLabel) {
+    process.stdout.write(chalk.green('Karis: '));
+  }
+
+  return null;
+}
 
 export function registerChatCommand(program: Command): void {
   program
@@ -75,7 +133,8 @@ export function registerChatCommand(program: Command): void {
 
         if (isTextOutput()) {
           console.log();
-          console.log(chalk.bold('CMO ready.') + chalk.dim(` Mode: ${agent.getDescription()}`));
+          console.log(renderKarisLogo());
+          console.log(chalk.dim('You build, Karis grow.'));
 
           if (agent instanceof RemoteAgent) {
             console.log(chalk.dim(`Conversation: ${agent.getConversationId() || 'pending'}`));
@@ -178,19 +237,38 @@ export function registerChatCommand(program: Command): void {
 
             messages.push({ role: 'user', content: userInput });
 
-            if (isTextOutput()) {
-              process.stdout.write(chalk.green('CMO: '));
-            }
-
             let fullResponse = '';
             let hasError = false;
             const events: Array<{ type: string; tool?: string; error?: string; content?: string }> = [];
+            let waitingIndicator = isTextOutput() ? startAssistantWaitingIndicator() : null;
+            let assistantLabelPrinted = false;
 
             resetToolCallCounter();
             for await (const chunk of agent.streamChat(messages, undefined, options.skill, options.tool)) {
               if (chunk.type === 'hitl_request' && agent instanceof RemoteAgent) {
+                waitingIndicator = stopAssistantWaitingIndicator(waitingIndicator);
                 await handleHitlChunk(chunk, agent, !!options.yes);
                 continue;
+              }
+
+              const shouldShowAssistantLabel: boolean = isTextOutput()
+                && chunk.type === 'content'
+                && !!chunk.content
+                && !assistantLabelPrinted;
+              const shouldPreserveStatus = chunk.type === 'tool_start'
+                || chunk.type === 'tool_end'
+                || chunk.type === 'working_summary'
+                || chunk.type === 'progress';
+
+              if (waitingIndicator) {
+                waitingIndicator = stopAssistantWaitingIndicator(waitingIndicator, {
+                  clearStatus: !shouldPreserveStatus,
+                  showLabel: shouldShowAssistantLabel,
+                });
+                assistantLabelPrinted = shouldShowAssistantLabel;
+              } else if (shouldShowAssistantLabel) {
+                process.stdout.write(chalk.green('Karis: '));
+                assistantLabelPrinted = true;
               }
 
               renderChunk(chunk);
@@ -202,6 +280,10 @@ export function registerChatCommand(program: Command): void {
               if (chunk.type === 'error') {
                 hasError = true;
               }
+            }
+
+            if (waitingIndicator) {
+              waitingIndicator = stopAssistantWaitingIndicator(waitingIndicator);
             }
 
             if (hasError) {
