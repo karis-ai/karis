@@ -31,6 +31,7 @@ import { isJsonOutput, isTextOutput, isYamlOutput, setCliContext } from './core/
 import { printCommandError, printCommandResult, renderStreamChunk, resetToolCallCounter } from './utils/output.js';
 import { createAuthRequiredError } from './core/errors.js';
 import { autoLogin } from './core/auth.js';
+import { CLI_VERSION } from './cli-version.js';
 
 const FORMAT_ALIASES: Record<string, OutputMode> = {
   text: 'text', table: 'table', json: 'json', yaml: 'yaml', csv: 'csv', md: 'md',
@@ -56,7 +57,7 @@ const program = new Command();
 
 program
   .name('karis')
-  .version('0.1.0')
+  .version(CLI_VERSION)
   .description('Your AI-powered CMO')
   .option('--json', 'Emit structured JSON output')
   .option('--jsonl', 'Emit newline-delimited JSON events')

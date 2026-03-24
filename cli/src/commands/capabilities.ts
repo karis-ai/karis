@@ -3,10 +3,13 @@ import chalk from 'chalk';
 import { isTextOutput } from '../core/cli-context.js';
 import { printCommandResult } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
+import { CLI_VERSION } from '../cli-version.js';
 
 const CAPABILITIES = {
   name: 'karis',
-  version: '0.1.0',
+  get version() {
+    return CLI_VERSION;
+  },
   description: 'Your AI-powered CMO — agent-first CLI for marketing automation',
   layers: {
     tool_runtime: {
