@@ -126,6 +126,12 @@ function nextStepsForApiCode(code: string): string[] {
         'Retry the command to rule out a transient backend delay',
         'If this happens only when resuming chat, clear the saved conversation with `npx karis config set last-conversation-id ""`',
       ];
+    case 'STREAM_TIMEOUT':
+      return [
+        'Check that the local API backend and agent runtime are both running',
+        'If direct commands like `karis x post` work but `karis chat` hangs, the agent runtime pipeline is likely stalled',
+        'Retry after restarting the local agent services or clearing the saved conversation with `npx karis config set last-conversation-id ""`',
+      ];
     default:
       return [];
   }

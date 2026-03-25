@@ -1,6 +1,10 @@
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { KarisClient } from '../core/client.js';
+import { isStructuredOutput, isTextOutput } from '../core/cli-context.js';
+import { createInvalidArgumentError } from '../core/errors.js';
 import { renderToolResult } from '../utils/formatter.js';
+import { printCommandResult, success } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
 
 export function registerRedditCommand(program: Command): void {
@@ -58,4 +62,103 @@ export function registerRedditCommand(program: Command): void {
       const result = await client.toolDirect('get_subreddit_rules', { subreddit });
       renderToolResult(result);
     }));
+
+  reddit
+    .command('post')
+    .description('Create a Reddit text post through the browser relay')
+    .requiredOption('--subreddit <name>', 'Subreddit name without r/')
+    .requiredOption('--title <text>', 'Post title')
+    .option('--body <text>', 'Optional post body')
+    .option('--confirm', 'Confirm that you want to post to Reddit')
+    .action(runCommand(async (options: {
+      subreddit: string;
+      title: string;
+      body?: string;
+      confirm?: boolean;
+    }) => {
+      ensureConfirmed(options.confirm, 'post to Reddit');
+      const client = await KarisClient.create();
+      const result = await client.postToReddit({
+        subreddit: options.subreddit,
+        title: options.title,
+        body: options.body,
+      });
+      renderActionResult('Reddit post completed', result, [
+        'message',
+        'post_url',
+        'subreddit',
+        'title',
+      ]);
+    }));
+
+  reddit
+    .command('comment')
+    .description('Comment on a Reddit post through the browser relay')
+    .requiredOption('--url <postUrl>', 'Full Reddit post URL')
+    .option('--confirm', 'Confirm that you want to comment on Reddit')
+    .argument('<text>', 'Comment text')
+    .action(runCommand(async (
+      text: string,
+      options: { url: string; confirm?: boolean },
+    ) => {
+      ensureConfirmed(options.confirm, 'comment on Reddit');
+      const client = await KarisClient.create();
+      const result = await client.commentOnReddit({
+        post_url: options.url,
+        text,
+      });
+      renderActionResult('Reddit comment completed', result, [
+        'message',
+        'post_url',
+        'text',
+      ]);
+    }));
+}
+
+function ensureConfirmed(confirmed: boolean | undefined, actionDescription: string): void {
+  if (confirmed) return;
+  throw createInvalidArgumentError(`Refusing to ${actionDescription} without --confirm.`, [
+    'Re-run the command with `--confirm` if you want to execute this browser action.',
+  ]);
+}
+
+function formatValue(value: unknown): string {
+  if (value == null) return '(none)';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return JSON.stringify(value);
+}
+
+function humanizeKey(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function renderActionResult(title: string, result: Record<string, unknown>, preferredKeys: string[] = []): void {
+  if (isStructuredOutput()) {
+    printCommandResult(result);
+    return;
+  }
+
+  const printed = new Set<string>();
+  if (isTextOutput()) {
+    console.log();
+    console.log(success(title));
+    console.log();
+  }
+
+  for (const key of preferredKeys) {
+    if (!(key in result) || key === 'success') continue;
+    printed.add(key);
+    console.log(`${chalk.bold(humanizeKey(key))}: ${formatValue(result[key])}`);
+  }
+
+  for (const key of Object.keys(result)) {
+    if (key === 'success' || printed.has(key)) continue;
+    console.log(`${chalk.bold(humanizeKey(key))}: ${formatValue(result[key])}`);
+  }
+
+  console.log();
 }

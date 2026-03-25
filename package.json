@@ -7,7 +7,9 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=cli",
+    "dev": "npm run dev --workspace=cli",
     "typecheck": "npm run typecheck --workspace=cli",
+    "karis": "node ./cli/bin/karis.js",
     "generate": "python3 scripts/generate_marketplace.py && python3 scripts/generate_agents.py"
   },
   "license": "MIT",

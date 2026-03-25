@@ -88,10 +88,16 @@ karis chat
 karis web search "AI coding tools"
 karis reddit search "AI agents" --subreddit SaaS
 karis x tweets elonmusk
+karis browser status
 
 # Skill-guided chat (Layer 2)
 karis chat --skill brand-intel "Analyze my brand"
 karis chat --skill aeo-geo "Audit AI search visibility"
+
+# Browser relay write actions
+karis browser connect --extension-id <id>
+karis x post "hello world" --confirm
+karis reddit post --subreddit test --title "Hello" --confirm
 ```
 
 ---
@@ -108,12 +114,33 @@ karis web read <url> [--focus <keyword>]   # Read a webpage
 # X / Twitter
 karis x search <query> [--max-results <n>] # Search X posts
 karis x tweets <username>                  # Get user's tweets
+karis x post <text> --confirm              # Post through browser relay
+karis x reply --url <tweetUrl> <text> --confirm
+karis x follow <profiles...> --confirm
 
 # Reddit
 karis reddit search <query> [--subreddit]  # Search Reddit
 karis reddit posts <subreddit> [--sort]    # Browse a subreddit
 karis reddit comments <post_id>            # Get comment tree
 karis reddit rules <subreddit>             # Subreddit rules
+karis reddit post --subreddit <name> --title <text> --confirm
+karis reddit comment --url <postUrl> <text> --confirm
+
+# Browser relay
+karis browser status                       # Show extension relay state
+karis browser connect --extension-id <id> # Pair CLI to browser extension
+karis browser navigate --url <url>        # Open a page in the connected browser
+karis browser get-state                    # Inspect page state + accessibility tree
+karis browser get-content [-o file]        # Extract readable page markdown
+karis browser click [--element-index|--text|--selector]
+karis browser type --text <text> [--clear]
+karis browser scroll [--direction] [--amount]
+karis browser screenshot [-o file]
+karis browser post-x --text <text> --confirm
+karis browser reply-x --url <tweetUrl> --text <text> --confirm
+karis browser follow-x --profile <value> --confirm
+karis browser post-reddit --subreddit <name> --title <text> --confirm
+karis browser comment-reddit --url <postUrl> --text <text> --confirm
 
 # YouTube
 karis youtube search <query>               # Search YouTube
@@ -160,9 +187,17 @@ karis setup                                # First-time wizard
 karis doctor                               # Verify environment
 karis config list                          # View config
 karis config set api-key sk-ka-...         # Set API key
+karis config set browser-extension-id <id> # Save browser extension ID
 karis tools list                           # Discover tools & skills
 karis capabilities                         # Layer Cake overview
 ```
+
+### Browser Relay Notes
+
+- `karis doctor` now includes browser relay status as an optional check.
+- Browser write commands require a connected browser extension and a backend that exposes `/api/browser-actions/*` and `/api/browser-relay/relay-token`.
+- High-risk commands such as posting, replying, commenting, and following require `--confirm`.
+- `karis browser connect` resolves the extension ID from `--extension-id`, `KARIS_BROWSER_EXTENSION_ID`, `SOPHIA_BROWSER_EXTENSION_ID`, or `karis config set browser-extension-id <id>`.
 
 ### Output Formats
 

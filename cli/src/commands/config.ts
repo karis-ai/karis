@@ -20,7 +20,7 @@ export function registerConfigCommand(program: Command): void {
 
   configCmd
     .command('set <key> <value>')
-    .description('Set a config value (supported: api-key, base-url)')
+    .description('Set a config value (supported: api-key, base-url, browser-extension-id)')
     .action(runCommand(async (key: string, value: string) => {
       if (!isSupportedConfigKey(key)) {
         throw createInvalidArgumentError(

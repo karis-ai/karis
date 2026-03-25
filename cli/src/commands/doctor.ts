@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { loadResolvedConfig, maskValue } from '../utils/config.js';
-import { KarisClient } from '../core/client.js';
+import { BrowserStatus, KarisClient } from '../core/client.js';
 import { printCommandResult } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
 import { isTextOutput } from '../core/cli-context.js';
@@ -12,6 +12,20 @@ interface DoctorCheck {
   message: string;
   details?: Record<string, unknown>;
 }
+
+type OptionalBrowserCheck =
+  | {
+    ok: true;
+    status: BrowserStatus;
+  }
+  | {
+    ok: false;
+    error: {
+      code: string;
+      message: string;
+      statusCode?: number;
+    };
+  };
 
 export function registerDoctorCommand(program: Command): void {
   program
@@ -51,6 +65,7 @@ export function registerDoctorCommand(program: Command): void {
         const client = await KarisClient.create();
         checks.push(await checkAuth(client));
         checks.push(await checkBrand(client));
+        checks.push(await checkBrowser(client));
       }
 
       const hasFailure = checks.some((check) => check.status === 'fail');
@@ -146,6 +161,61 @@ async function checkBrand(client: KarisClient): Promise<DoctorCheck> {
       id: 'brand.profile',
       status: 'fail',
       message: error instanceof Error ? error.message : 'Unable to read brand profile',
+    };
+  }
+}
+
+async function checkBrowser(client: KarisClient): Promise<DoctorCheck> {
+  const browserCheck = await getBrowserCheck(client);
+
+  if (!browserCheck.ok) {
+    return {
+      id: 'browser.relay',
+      status: 'warn',
+      message: `Browser relay unavailable (optional): ${browserCheck.error.message}`,
+      details: browserCheck.error,
+    };
+  }
+
+  if (browserCheck.status.extension_connected && browserCheck.status.can_execute) {
+    return {
+      id: 'browser.relay',
+      status: 'pass',
+      message: 'Browser relay connected and ready',
+      details: {
+        user_id: browserCheck.status.user_id,
+        auth_type: browserCheck.status.auth_type,
+        connected_here: browserCheck.status.connected_here,
+        owner_instance: browserCheck.status.owner_instance,
+      },
+    };
+  }
+
+  return {
+    id: 'browser.relay',
+    status: 'warn',
+    message: 'Browser relay reachable but not ready (optional)',
+    details: {
+      extension_connected: browserCheck.status.extension_connected,
+      can_execute: browserCheck.status.can_execute,
+      auth_type: browserCheck.status.auth_type,
+      owner_instance: browserCheck.status.owner_instance,
+    },
+  };
+}
+
+async function getBrowserCheck(client: KarisClient): Promise<OptionalBrowserCheck> {
+  try {
+    const status = await client.getBrowserStatus();
+    return { ok: true, status };
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        code: error instanceof Error && 'code' in error ? String(error.code) : 'RUNTIME_ERROR',
+        message: error instanceof Error ? error.message : 'Unknown browser status error',
+        statusCode: error instanceof Error && 'statusCode' in error ? Number(error.statusCode) : undefined,
+      },
     };
   }
 }

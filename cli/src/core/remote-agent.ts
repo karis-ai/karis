@@ -229,12 +229,20 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     toolHint?: string,
   ): AsyncGenerator<StreamChunk, void, unknown> {
     const conversationId = await this.ensureConversationId();
+    let extensionRelayConnected = false;
+    try {
+      const status = await this.client.getBrowserStatus();
+      extensionRelayConnected = !!status.extension_connected && !!status.can_execute;
+    } catch {
+      // Best-effort only. Chat should still work when browser relay status is unavailable.
+    }
     const stream = this.client.chat(message, {
       conversationId,
       skillHint,
       toolHint,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
       interactionMode: 'headless',
+      extensionRelayConnected,
     });
 
     for await (const event of stream) {

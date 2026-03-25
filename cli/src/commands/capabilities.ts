@@ -48,6 +48,16 @@ const CAPABILITIES = {
     'brand init': { description: 'Initialize brand profile from domain' },
     'brand show': { description: 'Show current brand profile' },
     'brand list': { description: 'List all brands' },
+    doctor: { description: 'Run CLI diagnostics; browser relay status is checked as optional context' },
+    'browser status': { description: 'Show browser relay status for the current user' },
+    'browser connect': { description: 'Bootstrap the browser extension relay without the IDE' },
+    'browser navigate': { description: 'Navigate the connected browser to a URL' },
+    'browser screenshot': { description: 'Capture a screenshot via the browser relay' },
+    'x post': { description: 'Post to X/Twitter through the browser relay' },
+    'x reply': { description: 'Reply to a tweet through the browser relay' },
+    'x follow': { description: 'Follow one or more X profiles through the browser relay' },
+    'reddit post': { description: 'Create a Reddit post through the browser relay' },
+    'reddit comment': { description: 'Comment on a Reddit post through the browser relay' },
     capabilities: { description: 'Show this capabilities descriptor' },
   },
   examples: [
@@ -65,6 +75,11 @@ const CAPABILITIES = {
     '',
     '# Discovery',
     'karis tools list',
+    '',
+    '# Browser relay',
+    'karis browser status',
+    'karis browser connect --extension-id <id>',
+    'karis x post "hello world" --confirm',
   ],
 };
 

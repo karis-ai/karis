@@ -17,6 +17,7 @@ export interface ChatOptions {
   direct?: boolean;
   tz?: string;
   interactionMode?: 'interactive' | 'headless' | 'automated';
+  extensionRelayConnected?: boolean;
 }
 
 export interface HistoryMessage {
@@ -47,6 +48,72 @@ export interface APIKeyInfo {
   expires_at: string | null;
   created_at: string;
 }
+
+export interface BrowserStatus {
+  success: boolean;
+  user_id: string;
+  auth_type?: string;
+  extension_connected: boolean;
+  connected_here: boolean;
+  can_execute: boolean;
+  owner_instance: string | null;
+  local_extension_connected: boolean;
+  local_cdp_clients: number;
+  instance: {
+    hostname: string;
+    instance_id: string;
+  };
+}
+
+export interface RelayTokenResponse {
+  token: string;
+  expires_in: number;
+  user_id: string;
+}
+
+export interface BrowserNavigateResult {
+  success?: boolean;
+  title?: string;
+  url?: string;
+  [key: string]: unknown;
+}
+
+export interface BrowserStateResult {
+  url: string;
+  title: string;
+  viewport: {
+    width: number;
+    height: number;
+  };
+  scroll: {
+    x: number;
+    y: number;
+    pageHeight: number;
+  };
+  dpr: number;
+  elements: string;
+  accessibility_tree?: string;
+  [key: string]: unknown;
+}
+
+export interface BrowserContentResult {
+  success?: boolean;
+  url?: string;
+  title?: string;
+  content_markdown?: string;
+  [key: string]: unknown;
+}
+
+export interface BrowserScreenshotResult {
+  success?: boolean;
+  image_base64?: string;
+  base64_png?: string;
+  mime_type?: string;
+  base64_length?: number;
+  [key: string]: unknown;
+}
+
+export type BrowserActionResult = Record<string, unknown>;
 
 // Brand Assets API Types (based on actual API response)
 export interface BrandAssetsSelection {
@@ -213,7 +280,8 @@ export interface KarisClientOptions {
 export class KarisClient {
   private apiKey: string;
   private apiUrl: string;
-  private static readonly CHAT_CONNECT_TIMEOUT_MS = 120000;
+  private static readonly CHAT_CONNECT_TIMEOUT_MS = 30000;
+  private static readonly CHAT_FIRST_EVENT_TIMEOUT_MS = 30000;
 
   constructor(options: KarisClientOptions = {}) {
     this.apiKey = options.apiKey || '';
@@ -233,20 +301,96 @@ export class KarisClient {
   }
 
   async verifyKey(): Promise<APIKeyInfo> {
-    const response = await fetch(`${this.apiUrl}/api/api-keys/me`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${this.apiKey}` },
-    });
-
-    if (!response.ok) {
-      throw this.buildError(response.status, await this.extractMessage(response));
-    }
-
-    const body = (await response.json()) as { data?: APIKeyInfo };
+    const body = await this.apiGet<{ data?: APIKeyInfo }>('/api/api-keys/me');
     if (!body.data) {
       throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
     }
     return body.data;
+  }
+
+  async getBrowserStatus(): Promise<BrowserStatus> {
+    return this.apiGet<BrowserStatus>('/api/browser-actions/status');
+  }
+
+  async getRelayToken(): Promise<RelayTokenResponse> {
+    return this.apiGet<RelayTokenResponse>('/api/browser-relay/relay-token');
+  }
+
+  async navigateBrowser(url: string): Promise<BrowserNavigateResult> {
+    return this.apiPost<BrowserNavigateResult>('/api/browser-actions/navigate', { url });
+  }
+
+  async getBrowserState(): Promise<BrowserStateResult> {
+    return this.apiGet<BrowserStateResult>('/api/browser-actions/get-state');
+  }
+
+  async getBrowserContent(): Promise<BrowserContentResult> {
+    return this.apiGet<BrowserContentResult>('/api/browser-actions/get-content');
+  }
+
+  async clickBrowser(params: {
+    element_index?: number;
+    text?: string;
+    css_selector?: string;
+  }): Promise<BrowserActionResult> {
+    return this.apiPost<BrowserActionResult>('/api/browser-actions/click', params);
+  }
+
+  async typeBrowser(params: {
+    text: string;
+    clear?: boolean;
+  }): Promise<BrowserActionResult> {
+    return this.apiPost<BrowserActionResult>('/api/browser-actions/type', params);
+  }
+
+  async scrollBrowser(params?: {
+    direction?: string;
+    amount?: number;
+  }): Promise<BrowserActionResult> {
+    return this.apiPost<BrowserActionResult>('/api/browser-actions/scroll', params ?? {});
+  }
+
+  async takeBrowserScreenshot(): Promise<BrowserScreenshotResult> {
+    return this.apiGet<BrowserScreenshotResult>('/api/browser-actions/screenshot');
+  }
+
+  async postToX(params: {
+    text: string;
+    social_account_id?: string;
+    signal_id?: string;
+  }): Promise<BrowserActionResult> {
+    return this.apiPost<BrowserActionResult>('/api/browser-actions/post-to-x', params);
+  }
+
+  async replyToX(params: {
+    tweet_url: string;
+    text: string;
+    social_account_id?: string;
+    signal_id?: string;
+  }): Promise<BrowserActionResult> {
+    return this.apiPost<BrowserActionResult>('/api/browser-actions/reply-to-x', params);
+  }
+
+  async followOnX(params: {
+    profile?: string;
+    profiles?: string[];
+  }): Promise<BrowserActionResult> {
+    return this.apiPost<BrowserActionResult>('/api/browser-actions/follow-on-x', params);
+  }
+
+  async postToReddit(params: {
+    subreddit: string;
+    title: string;
+    body?: string;
+  }): Promise<BrowserActionResult> {
+    return this.apiPost<BrowserActionResult>('/api/browser-actions/post-to-reddit', params);
+  }
+
+  async commentOnReddit(params: {
+    post_url: string;
+    text: string;
+  }): Promise<BrowserActionResult> {
+    return this.apiPost<BrowserActionResult>('/api/browser-actions/comment-on-reddit', params);
   }
 
   async ensureConversation(): Promise<string> {
@@ -294,6 +438,9 @@ export class KarisClient {
     if (options.direct) payload.direct = true;
     if (options.tz) payload.tz = options.tz;
     if (options.interactionMode) payload.interaction_mode = options.interactionMode;
+    if (typeof options.extensionRelayConnected === 'boolean') {
+      payload.extension_relay_connected = options.extensionRelayConnected;
+    }
 
     const connectController = new AbortController();
     const connectTimer = setTimeout(
@@ -317,7 +464,7 @@ export class KarisClient {
       clearTimeout(connectTimer);
       if (this.isTimeoutError(error)) {
         throw new KarisApiError(
-          'Timed out waiting for the chat response. The saved conversation may be stale, or the backend may be delayed.',
+          'Timed out waiting for the chat backend to start streaming. The saved conversation may be stale, or the agent runtime may be delayed.',
           'REQUEST_TIMEOUT',
           504,
           EXIT_RUNTIME,
@@ -809,9 +956,13 @@ export class KarisClient {
     const reader = body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let receivedEvent = false;
 
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await this.readWithTimeout(
+        reader,
+        receivedEvent ? null : KarisClient.CHAT_FIRST_EVENT_TIMEOUT_MS,
+      );
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
@@ -832,15 +983,49 @@ export class KarisClient {
         if (!eventType || !dataStr) continue;
         if (eventType === 'heartbeat') continue;
         if (eventType === 'done') {
+          receivedEvent = true;
           yield { type: 'done' };
           return;
         }
 
         try {
+          receivedEvent = true;
           yield this.parseEvent(eventType, JSON.parse(dataStr));
         } catch {
           // skip malformed JSON
         }
+      }
+    }
+  }
+
+  private async readWithTimeout(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    timeoutMs: number | null,
+  ): Promise<ReadableStreamReadResult<Uint8Array>> {
+    if (timeoutMs == null) {
+      return reader.read();
+    }
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        reader.read(),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(
+              new KarisApiError(
+                'Connected to the chat backend, but it did not produce any events. The agent runtime may be stalled.',
+                'STREAM_TIMEOUT',
+                504,
+                EXIT_RUNTIME,
+              ),
+            );
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     }
   }
@@ -882,10 +1067,44 @@ export class KarisClient {
 
   // --- Error classification ---
 
+  private async apiGet<T>(path: string): Promise<T> {
+    const response = await fetch(`${this.apiUrl}${path}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    });
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    return (await response.json()) as T;
+  }
+
+  private async apiPost<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+    const response = await fetch(`${this.apiUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify(body ?? {}),
+    });
+
+    if (!response.ok) {
+      throw this.buildError(response.status, await this.extractMessage(response));
+    }
+
+    return (await response.json()) as T;
+  }
+
   private async extractMessage(response: Response): Promise<string> {
     try {
-      const body = (await response.json()) as { message?: string };
-      return body?.message || '';
+      const body = (await response.json()) as {
+        message?: string;
+        detail?: string;
+        error?: { message?: string };
+      };
+      return body?.message || body?.detail || body?.error?.message || '';
     } catch {
       return '';
     }

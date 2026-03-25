@@ -4,7 +4,12 @@ import { homedir } from 'node:os';
 
 const KARIS_DIR = '.karis';
 const CONFIG_FILE = 'config.json';
-export const SUPPORTED_CONFIG_KEYS = ['api-key', 'base-url', 'last-conversation-id'] as const;
+export const SUPPORTED_CONFIG_KEYS = [
+  'api-key',
+  'base-url',
+  'last-conversation-id',
+  'browser-extension-id',
+] as const;
 
 export interface KarisConfig {
   'api-key'?: string;
