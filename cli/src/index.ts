@@ -15,6 +15,7 @@ import { registerDoctorCommand } from './commands/doctor.js';
 import { registerShowCommand } from './commands/show.js';
 import { registerToolsCommand } from './commands/tools.js';
 import { registerCapabilitiesCommand } from './commands/capabilities.js';
+import { registerBrowserCommand } from './commands/browser.js';
 import { registerWebCommand } from './commands/web.js';
 import { registerXCommand } from './commands/x.js';
 import { registerRedditCommand } from './commands/reddit.js';
@@ -98,6 +99,7 @@ registerBrandInfoCommand(brandCmd);
 // --- Site-namespaced tool commands (Layer 1) ---
 
 registerWebCommand(program);
+registerBrowserCommand(program);
 registerXCommand(program);
 registerRedditCommand(program);
 registerYoutubeCommand(program);
