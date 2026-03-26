@@ -277,9 +277,15 @@ export interface KarisClientOptions {
   apiUrl?: string;
 }
 
+interface RequestOptions {
+  timeoutMs?: number;
+}
+
 export class KarisClient {
   private apiKey: string;
   private apiUrl: string;
+  private static readonly HTTP_REQUEST_TIMEOUT_MS = 30000;
+  private static readonly BROWSER_STATUS_TIMEOUT_MS = 5000;
   private static readonly CHAT_CONNECT_TIMEOUT_MS = 30000;
   private static readonly CHAT_FIRST_EVENT_TIMEOUT_MS = 30000;
 
@@ -308,8 +314,8 @@ export class KarisClient {
     return body.data;
   }
 
-  async getBrowserStatus(): Promise<BrowserStatus> {
-    return this.apiGet<BrowserStatus>('/api/browser-actions/status');
+  async getBrowserStatus(timeoutMs = KarisClient.BROWSER_STATUS_TIMEOUT_MS): Promise<BrowserStatus> {
+    return this.apiGet<BrowserStatus>('/api/browser-actions/status', { timeoutMs });
   }
 
   async getRelayToken(): Promise<RelayTokenResponse> {
@@ -394,20 +400,7 @@ export class KarisClient {
   }
 
   async ensureConversation(): Promise<string> {
-    const response = await fetch(`${this.apiUrl}/api/v1/agent/conversation`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({}),
-    });
-
-    if (!response.ok) {
-      throw this.buildError(response.status, await this.extractMessage(response));
-    }
-
-    const body = (await response.json()) as { data?: { conversation_id?: string } };
+    const body = await this.apiPost<{ data?: { conversation_id?: string } }>('/api/v1/agent/conversation');
     const conversationId = body.data?.conversation_id;
     if (!conversationId) {
       throw new KarisApiError('Unexpected response', 'INVALID_RESPONSE', 500, EXIT_RUNTIME);
@@ -1007,11 +1000,13 @@ export class KarisClient {
     }
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const pendingRead = reader.read();
     try {
       return await Promise.race([
-        reader.read(),
+        pendingRead,
         new Promise<never>((_, reject) => {
           timeoutId = setTimeout(() => {
+            void reader.cancel().catch(() => {});
             reject(
               new KarisApiError(
                 'Connected to the chat backend, but it did not produce any events. The agent runtime may be stalled.',
@@ -1067,34 +1062,59 @@ export class KarisClient {
 
   // --- Error classification ---
 
-  private async apiGet<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.apiUrl}${path}`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${this.apiKey}` },
-    });
-
-    if (!response.ok) {
-      throw this.buildError(response.status, await this.extractMessage(response));
-    }
-
-    return (await response.json()) as T;
+  private async apiGet<T>(path: string, options: RequestOptions = {}): Promise<T> {
+    return this.requestJson<T>(path, { method: 'GET', timeoutMs: options.timeoutMs });
   }
 
-  private async apiPost<T>(path: string, body?: Record<string, unknown>): Promise<T> {
-    const response = await fetch(`${this.apiUrl}${path}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(body ?? {}),
-    });
+  private async apiPost<T>(path: string, body?: Record<string, unknown>, options: RequestOptions = {}): Promise<T> {
+    return this.requestJson<T>(path, { method: 'POST', body, timeoutMs: options.timeoutMs });
+  }
 
-    if (!response.ok) {
-      throw this.buildError(response.status, await this.extractMessage(response));
+  private async requestJson<T>(
+    path: string,
+    options: {
+      method: 'GET' | 'POST';
+      body?: Record<string, unknown>;
+      timeoutMs?: number;
+    },
+  ): Promise<T> {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, options.timeoutMs ?? KarisClient.HTTP_REQUEST_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${this.apiUrl}${path}`, {
+        method: options.method,
+        headers: {
+          ...(options.method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: options.method === 'POST' ? JSON.stringify(options.body ?? {}) : undefined,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw this.buildError(response.status, await this.extractMessage(response));
+      }
+
+      return (await response.json()) as T;
+    } catch (error) {
+      if (timedOut || this.isTimeoutError(error)) {
+        throw new KarisApiError(
+          'Timed out waiting for the Karis API response.',
+          'REQUEST_TIMEOUT',
+          504,
+          EXIT_RUNTIME,
+        );
+      }
+
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    return (await response.json()) as T;
   }
 
   private async extractMessage(response: Response): Promise<string> {

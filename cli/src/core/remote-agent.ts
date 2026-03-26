@@ -231,7 +231,7 @@ You are the CMO for ${brandProfile.name || brandProfile.domain}. Use this contex
     const conversationId = await this.ensureConversationId();
     let extensionRelayConnected = false;
     try {
-      const status = await this.client.getBrowserStatus();
+      const status = await this.client.getBrowserStatus(5000);
       extensionRelayConnected = !!status.extension_connected && !!status.can_execute;
     } catch {
       // Best-effort only. Chat should still work when browser relay status is unavailable.

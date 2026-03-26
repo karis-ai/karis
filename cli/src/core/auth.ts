@@ -7,9 +7,10 @@ import { isTextOutput } from './cli-context.js';
 import { KarisClient } from './client.js';
 
 const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
+const STAGING_APP_URL = 'https://sophia-ide-staging.jingyueyusen.workers.dev';
 
 function deriveAppUrl(apiUrl: string): string {
-  if (apiUrl.includes('api-staging')) return 'https://app-staging.karis.im';
+  if (apiUrl.includes('api-staging')) return STAGING_APP_URL;
   if (apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
     const port = new URL(apiUrl).port || '8000';
     return `http://localhost:${port === '8000' ? '3000' : port}`;
