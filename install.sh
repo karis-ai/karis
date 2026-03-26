@@ -9,6 +9,7 @@ set -e
 KARIS_VERSION="${KARIS_VERSION:-latest}"
 INSTALL_DIR="${HOME}/.karis/bin"
 KARIS_BIN="${INSTALL_DIR}/karis"
+KARIS_STAGING_BIN="${INSTALL_DIR}/karis-staging"
 REPO="karis-ai/karis"
 
 # Colors
@@ -89,7 +90,9 @@ install_from_source() {
     mkdir -p "${INSTALL_DIR}"
     cp -r cli/dist "${INSTALL_DIR}/dist"
     cp cli/bin/karis.js "${KARIS_BIN}"
+    cp cli/bin/karis-staging.js "${KARIS_STAGING_BIN}"
     chmod +x "${KARIS_BIN}"
+    chmod +x "${KARIS_STAGING_BIN}"
 
     log_info "Build complete!"
     return 0
@@ -146,6 +149,7 @@ echo "    2. Run: karis setup"
 echo ""
 echo "  Commands:"
 echo "    karis setup              # First-time configuration"
+echo "    karis-staging setup      # First-time configuration (staging)"
 echo "    karis chat               # Natural language interface"
 echo "    karis brand init <name>  # Create brand profile"
 echo "    karis doctor             # Verify environment"

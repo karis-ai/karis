@@ -24,6 +24,10 @@ npx @karis-ai/cli setup
 npm install -g @karis-ai/cli
 karis setup
 karis chat
+
+# Staging CLI
+karis-staging setup
+karis-staging chat
 ```
 
 ### Claude Code
@@ -81,8 +85,12 @@ Karis exposes three tiers of capability:
 # First-time setup
 karis setup
 
+# First-time setup against staging
+karis-staging setup
+
 # Interactive agent chat (Layer 3)
 karis chat
+karis-staging chat
 
 # Direct tool calls (Layer 1)
 karis web search "AI coding tools"
@@ -300,6 +308,13 @@ Karis stores configuration globally in `~/.karis/`:
 ```
 ~/.karis/
 └── config.json             # api-key and base-url
+```
+
+The staging wrapper stores its own config in `~/.karis-staging/` so it does not overwrite your production login:
+
+```text
+~/.karis-staging/
+└── config.json             # staging api-key and base-url
 ```
 
 ### Environment Variables
