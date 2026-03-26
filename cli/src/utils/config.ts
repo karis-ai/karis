@@ -2,7 +2,8 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-const KARIS_DIR = '.karis';
+const DEFAULT_KARIS_DIR = '.karis';
+const STAGING_KARIS_DIR = '.karis-staging';
 const CONFIG_FILE = 'config.json';
 export const SUPPORTED_CONFIG_KEYS = [
   'api-key',
@@ -29,13 +30,26 @@ export interface ResolvedConfig {
 }
 
 function globalConfigPath(): string {
-  return join(homedir(), KARIS_DIR, CONFIG_FILE);
+  return join(getKarisHomeDir(), CONFIG_FILE);
 }
 
 export async function ensureKarisDir(): Promise<string> {
-  const dir = join(homedir(), KARIS_DIR);
+  const dir = getKarisHomeDir();
   await mkdir(dir, { recursive: true });
   return dir;
+}
+
+export function getKarisHomeDir(): string {
+  const explicitDir = process.env.KARIS_CONFIG_DIR?.trim();
+  if (explicitDir) {
+    return explicitDir;
+  }
+
+  if (process.env.KARIS_ENV?.trim().toLowerCase() === 'staging') {
+    return join(homedir(), STAGING_KARIS_DIR);
+  }
+
+  return join(homedir(), DEFAULT_KARIS_DIR);
 }
 
 export async function loadConfig(): Promise<KarisConfig> {

@@ -1,8 +1,10 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { getKarisHomeDir } from './config.js';
 
-const CACHE_PATH = join(homedir(), '.karis', 'last-index.json');
+function cachePath(): string {
+  return join(getKarisHomeDir(), 'last-index.json');
+}
 
 export interface IndexEntry {
   id: string;
@@ -12,13 +14,14 @@ export interface IndexEntry {
 }
 
 export async function saveIndex(entries: IndexEntry[]): Promise<void> {
-  await mkdir(join(homedir(), '.karis'), { recursive: true });
-  await writeFile(CACHE_PATH, JSON.stringify(entries), 'utf-8');
+  const karisDir = getKarisHomeDir();
+  await mkdir(karisDir, { recursive: true });
+  await writeFile(cachePath(), JSON.stringify(entries), 'utf-8');
 }
 
 export async function loadIndex(): Promise<IndexEntry[]> {
   try {
-    const raw = await readFile(CACHE_PATH, 'utf-8');
+    const raw = await readFile(cachePath(), 'utf-8');
     return JSON.parse(raw);
   } catch {
     return [];

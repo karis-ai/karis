@@ -16,6 +16,7 @@ import {
 } from '../core/client.js';
 import { isStructuredOutput, isTextOutput } from '../core/cli-context.js';
 import { createInvalidArgumentError } from '../core/errors.js';
+import { ensureConfirmed, renderActionResult, renderFollowResult } from '../utils/browser-action-output.js';
 import { loadConfig } from '../utils/config.js';
 import { printCommandResult, success } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
@@ -82,27 +83,6 @@ function collectValues(value: string, previous: string[]): string[] {
   return previous;
 }
 
-function humanizeKey(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function formatValue(value: unknown): string {
-  if (value == null) return '(none)';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return JSON.stringify(value);
-}
-
-function getResultsArray(result: BrowserActionResult): BrowserActionResult[] {
-  const { results } = result;
-  return Array.isArray(results)
-    ? results.filter((item): item is BrowserActionResult => typeof item === 'object' && item !== null)
-    : [];
-}
-
 function renderStatusText(status: BrowserStatus): void {
   console.log();
   console.log(chalk.bold('Browser Relay Status'));
@@ -146,59 +126,6 @@ function renderStateText(result: BrowserStateResult): void {
   console.log();
 }
 
-function renderActionResultText(
-  title: string,
-  result: BrowserActionResult,
-  preferredKeys: string[] = [],
-  omitKeys: string[] = [],
-): void {
-  const omit = new Set<string>(['success', ...omitKeys]);
-  const printed = new Set<string>();
-
-  console.log();
-  console.log(success(title));
-  console.log();
-
-  for (const key of preferredKeys) {
-    if (!(key in result) || omit.has(key)) continue;
-    printed.add(key);
-    console.log(`${chalk.bold(humanizeKey(key))}: ${formatValue(result[key])}`);
-  }
-
-  for (const key of Object.keys(result)) {
-    if (printed.has(key) || omit.has(key)) continue;
-    console.log(`${chalk.bold(humanizeKey(key))}: ${formatValue(result[key])}`);
-  }
-
-  console.log();
-}
-
-function renderFollowResultText(result: BrowserActionResult): void {
-  const results = getResultsArray(result);
-  if (results.length === 0) {
-    renderActionResultText('X follow completed', result);
-    return;
-  }
-
-  console.log();
-  console.log(success('X follow completed'));
-  console.log();
-  console.log(`${chalk.bold('Total')}: ${formatValue(result.total)}`);
-  console.log(`${chalk.bold('Succeeded')}: ${formatValue(result.succeeded)}`);
-  console.log(`${chalk.bold('Failed')}: ${formatValue(result.failed)}`);
-  console.log(`${chalk.bold('Message')}: ${formatValue(result.message)}`);
-  console.log();
-
-  for (const item of results) {
-    const profile = formatValue(item.profile);
-    const state = item.success ? 'ok' : 'failed';
-    const detail = formatValue(item.message || item.error || '');
-    console.log(`- ${profile}: ${state}${detail ? ` (${detail})` : ''}`);
-  }
-
-  console.log();
-}
-
 function resolveExtensionId(override?: string): string | null {
   const value = override?.trim();
   if (value) return value;
@@ -207,8 +134,7 @@ function resolveExtensionId(override?: string): string | null {
     process.env.KARIS_BROWSER_EXTENSION_ID ||
     process.env.SOPHIA_BROWSER_EXTENSION_ID ||
     process.env.NEXT_PUBLIC_BROWSER_EXTENSION_ID ||
-    process.env.NEXT_PUBLIC_EXTENSION_ID ||
-    undefined
+    process.env.NEXT_PUBLIC_EXTENSION_ID
   ) || null;
 }
 
@@ -220,7 +146,7 @@ async function resolveConfiguredExtensionId(override?: string): Promise<string |
   return config['browser-extension-id'] || DEFAULT_BROWSER_EXTENSION_ID;
 }
 
-function openUrlInBrowser(url: string): boolean {
+async function openUrlInBrowser(url: string): Promise<boolean> {
   let command = '';
   let args: string[] = [];
 
@@ -235,16 +161,32 @@ function openUrlInBrowser(url: string): boolean {
     args = [url];
   }
 
-  try {
+  return await new Promise(resolve => {
+    let settled = false;
     const child = spawn(command, args, {
       detached: true,
       stdio: 'ignore',
     });
-    child.unref();
-    return true;
-  } catch {
-    return false;
-  }
+
+    const finish = (opened: boolean): void => {
+      if (settled) return;
+      settled = true;
+      child.removeListener('error', onError);
+      child.removeListener('spawn', onSpawn);
+      clearTimeout(fallbackTimer);
+      if (opened) {
+        child.unref();
+      }
+      resolve(opened);
+    };
+
+    const onError = (): void => finish(false);
+    const onSpawn = (): void => finish(true);
+    const fallbackTimer = setTimeout(() => finish(false), 250);
+
+    child.once('error', onError);
+    child.once('spawn', onSpawn);
+  });
 }
 
 function sleep(ms: number): Promise<void> {
@@ -446,6 +388,11 @@ function buildPairingPage(extensionId: string, relay: RelayTokenResponse): strin
     </main>
     <script>
       const state = ${payload};
+      const STATUS_POLL_INTERVAL_MS = 1000;
+      const STATUS_POLL_TIMEOUT_MS = 30000;
+      let statusPollTimer = null;
+      let pollStartedAt = 0;
+
       document.getElementById('ext').textContent = state.extensionId;
       document.getElementById('user').textContent = state.userId;
       document.getElementById('install-link').href = state.installUrl;
@@ -469,8 +416,35 @@ function buildPairingPage(extensionId: string, relay: RelayTokenResponse): strin
         document.getElementById('actions').className = 'visible';
       }
 
+      function stopStatusPolling() {
+        if (statusPollTimer) {
+          clearTimeout(statusPollTimer);
+          statusPollTimer = null;
+        }
+      }
+
+      function scheduleStatusCheck() {
+        stopStatusPolling();
+        statusPollTimer = setTimeout(sendStatusCheck, STATUS_POLL_INTERVAL_MS);
+      }
+
+      function startStatusPolling() {
+        pollStartedAt = Date.now();
+        stopStatusPolling();
+        sendStatusCheck();
+      }
+
+      function pollingTimedOut() {
+        return pollStartedAt > 0 && Date.now() - pollStartedAt >= STATUS_POLL_TIMEOUT_MS;
+      }
+
       function sendStatusCheck() {
-        if (!globalThis.chrome?.runtime?.sendMessage) return;
+        if (!globalThis.chrome?.runtime?.sendMessage) {
+          showInstallFlow('Open this page in Chrome with the Karis extension installed.');
+          stopStatusPolling();
+          return;
+        }
+
         chrome.runtime.sendMessage(
           state.extensionId,
           { type: 'CHECK_EXTENSION_STATUS' },
@@ -479,19 +453,33 @@ function buildPairingPage(extensionId: string, relay: RelayTokenResponse): strin
             if (lastError) {
               if (lastError.message && lastError.message.includes('Receiving end does not exist')) {
                 showInstallFlow('Karis browser extension is not installed in this Chrome profile.');
+                stopStatusPolling();
+                return;
+              }
+              if (pollingTimedOut()) {
+                showInstallFlow('Extension relay status check timed out. You can retry pairing.');
                 return;
               }
               hideInstallFlow();
-              setStatus('err', 'Extension message failed: ' + lastError.message);
+              setStatus('warn', 'Token sent, waiting for extension relay connection...');
+              scheduleStatusCheck();
               return;
             }
             if (response?.success && response?.data?.relayConnected) {
+              stopStatusPolling();
               hideInstallFlow();
               setStatus('ok', 'Extension connected to relay. You can return to the CLI.');
               return;
             }
+
+            if (pollingTimedOut()) {
+              showInstallFlow('Token sent, but the extension did not report relay readiness in time.');
+              return;
+            }
+
             hideInstallFlow();
             setStatus('warn', 'Token sent, waiting for extension relay connection...');
+            scheduleStatusCheck();
           }
         );
       }
@@ -499,9 +487,11 @@ function buildPairingPage(extensionId: string, relay: RelayTokenResponse): strin
       function pair() {
         if (!globalThis.chrome?.runtime?.sendMessage) {
           showInstallFlow('Open this page in Chrome with the Karis extension installed.');
+          stopStatusPolling();
           return;
         }
 
+        stopStatusPolling();
         hideInstallFlow();
 
         chrome.runtime.sendMessage(
@@ -512,20 +502,23 @@ function buildPairingPage(extensionId: string, relay: RelayTokenResponse): strin
             if (lastError) {
               if (lastError.message && lastError.message.includes('Receiving end does not exist')) {
                 showInstallFlow('Karis browser extension is not installed in this Chrome profile.');
+                stopStatusPolling();
                 return;
               }
               hideInstallFlow();
               setStatus('err', 'Failed to reach extension: ' + lastError.message);
+              stopStatusPolling();
               return;
             }
             if (!response?.success) {
               hideInstallFlow();
               setStatus('err', 'Extension rejected token update.');
+              stopStatusPolling();
               return;
             }
             hideInstallFlow();
             setStatus('warn', 'Token sent. Checking relay connection...');
-            setTimeout(sendStatusCheck, 1200);
+            startStatusPolling();
           }
         );
       }
@@ -536,18 +529,27 @@ function buildPairingPage(extensionId: string, relay: RelayTokenResponse): strin
 </html>`;
 }
 
-async function waitForConnection(client: KarisClient, timeoutMs: number): Promise<BrowserStatus | null> {
+async function waitForConnection(
+  client: KarisClient,
+  timeoutMs: number,
+): Promise<{ status: BrowserStatus | null; lastError: Error | null }> {
   const deadline = Date.now() + timeoutMs;
+  let lastError: Error | null = null;
 
   while (Date.now() < deadline) {
-    const status = await client.getBrowserStatus();
-    if (status.extension_connected && status.can_execute) {
-      return status;
+    try {
+      const status = await client.getBrowserStatus();
+      lastError = null;
+      if (status.extension_connected && status.can_execute) {
+        return { status, lastError: null };
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
     }
     await sleep(1000);
   }
 
-  return null;
+  return { status: null, lastError };
 }
 
 function getPairingInstructions(pairingUrl: string, extensionId: string): string {
@@ -559,13 +561,6 @@ function getPairingInstructions(pairingUrl: string, extensionId: string): string
     `Extension ID: ${extensionId}`,
     'Open the pairing URL in the Chrome profile where the browser extension is installed.',
   ].join('\n');
-}
-
-function ensureConfirmed(confirmed: boolean | undefined, actionDescription: string): void {
-  if (confirmed) return;
-  throw createInvalidArgumentError(`Refusing to ${actionDescription} without --confirm.`, [
-    'Re-run the command with `--confirm` if you want to execute this browser action.',
-  ]);
 }
 
 function printStructured(data: unknown): void {
@@ -670,16 +665,17 @@ export function registerBrowserCommand(program: Command): void {
           console.log();
         }
 
-        const opened = opts.open !== false && openUrlInBrowser(pairingUrl);
+        const opened = opts.open !== false && await openUrlInBrowser(pairingUrl);
         if (isTextOutput() && !opened) {
           console.log(getPairingInstructions(pairingUrl, extensionId));
           console.log();
         }
 
-        const connected = await waitForConnection(client, timeoutSeconds * 1000);
+        const { status: connected, lastError } = await waitForConnection(client, timeoutSeconds * 1000);
         if (!connected) {
+          const suffix = lastError ? `\nLast status error: ${lastError.message}` : '';
           throw new Error(
-            `Extension did not connect before timeout.\n${getPairingInstructions(pairingUrl, extensionId)}`,
+            `Extension did not connect before timeout.${suffix}\n${getPairingInstructions(pairingUrl, extensionId)}`,
           );
         }
 
@@ -782,17 +778,10 @@ export function registerBrowserCommand(program: Command): void {
         text: opts.text?.trim() || undefined,
         css_selector: opts.selector?.trim() || undefined,
       });
-      if (isTextOutput()) {
-        renderActionResultText('Browser click completed', result, [
-          'method',
-          'text',
-          'matched',
-          'selector',
-          'index',
-          'coords',
-        ]);
-      }
-      printStructured(result);
+      renderActionResult('Browser click completed', result, {
+        preferredKeys: ['method', 'text', 'matched', 'selector', 'index', 'coords'],
+        failureMessage: 'Browser click failed.',
+      });
     }));
 
   browser
@@ -806,10 +795,10 @@ export function registerBrowserCommand(program: Command): void {
         text: opts.text,
         clear: opts.clear === true,
       });
-      if (isTextOutput()) {
-        renderActionResultText('Browser typing completed', result, ['typed', 'message']);
-      }
-      printStructured(result);
+      renderActionResult('Browser typing completed', result, {
+        preferredKeys: ['typed', 'message'],
+        failureMessage: 'Browser typing failed.',
+      });
     }));
 
   browser
@@ -823,15 +812,10 @@ export function registerBrowserCommand(program: Command): void {
         direction: opts.direction,
         amount: opts.amount,
       });
-      if (isTextOutput()) {
-        renderActionResultText('Browser scroll completed', result, [
-          'direction',
-          'pixels',
-          'scroll_y',
-          'page_height',
-        ]);
-      }
-      printStructured(result);
+      renderActionResult('Browser scroll completed', result, {
+        preferredKeys: ['direction', 'pixels', 'scroll_y', 'page_height'],
+        failureMessage: 'Browser scroll failed.',
+      });
     }));
 
   browser
@@ -882,16 +866,10 @@ export function registerBrowserCommand(program: Command): void {
         social_account_id: opts.socialAccountId,
         signal_id: opts.signalId,
       });
-      if (isTextOutput()) {
-        renderActionResultText('X post completed', result, [
-          'message',
-          'external_post_url',
-          'url',
-          'toast',
-          'text',
-        ]);
-      }
-      printStructured(result);
+      renderActionResult('X post completed', result, {
+        preferredKeys: ['message', 'external_post_url', 'url', 'toast', 'text'],
+        failureMessage: 'Failed to post to X.',
+      });
     }));
 
   browser
@@ -917,17 +895,10 @@ export function registerBrowserCommand(program: Command): void {
         social_account_id: opts.socialAccountId,
         signal_id: opts.signalId,
       });
-      if (isTextOutput()) {
-        renderActionResultText('X reply completed', result, [
-          'message',
-          'external_post_url',
-          'url',
-          'tweet_url',
-          'toast',
-          'text',
-        ]);
-      }
-      printStructured(result);
+      renderActionResult('X reply completed', result, {
+        preferredKeys: ['message', 'external_post_url', 'url', 'tweet_url', 'toast', 'text'],
+        failureMessage: 'Failed to reply on X.',
+      });
     }));
 
   browser
@@ -944,10 +915,9 @@ export function registerBrowserCommand(program: Command): void {
 
       const client = await KarisClient.create();
       const result = await client.followOnX(profiles.length === 1 ? { profile: profiles[0] } : { profiles });
-      if (isTextOutput()) {
-        renderFollowResultText(result);
-      }
-      printStructured(result);
+      renderFollowResult('X follow completed', result, {
+        failureMessage: 'Failed to follow on X.',
+      });
     }));
 
   browser
@@ -970,15 +940,10 @@ export function registerBrowserCommand(program: Command): void {
         title: opts.title,
         body: opts.body,
       });
-      if (isTextOutput()) {
-        renderActionResultText('Reddit post completed', result, [
-          'message',
-          'post_url',
-          'subreddit',
-          'title',
-        ]);
-      }
-      printStructured(result);
+      renderActionResult('Reddit post completed', result, {
+        preferredKeys: ['message', 'post_url', 'subreddit', 'title'],
+        failureMessage: 'Failed to post to Reddit.',
+      });
     }));
 
   browser
@@ -994,13 +959,9 @@ export function registerBrowserCommand(program: Command): void {
         post_url: opts.url,
         text: opts.text,
       });
-      if (isTextOutput()) {
-        renderActionResultText('Reddit comment completed', result, [
-          'message',
-          'post_url',
-          'text',
-        ]);
-      }
-      printStructured(result);
+      renderActionResult('Reddit comment completed', result, {
+        preferredKeys: ['message', 'post_url', 'text'],
+        failureMessage: 'Failed to comment on Reddit.',
+      });
     }));
 }
