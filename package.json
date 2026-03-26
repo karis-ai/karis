@@ -7,10 +7,12 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=cli",
+    "build:local": "npm run build:local --workspace=cli",
     "build:staging": "npm run build:staging --workspace=cli",
     "dev": "npm run dev --workspace=cli",
     "typecheck": "npm run typecheck --workspace=cli",
     "karis": "node ./cli/bin/karis.js",
+    "karis:local": "node ./cli/bin/karis-local.js",
     "karis:staging": "node ./cli/bin/karis-staging.js",
     "generate": "python3 scripts/generate_marketplace.py && python3 scripts/generate_agents.py"
   },

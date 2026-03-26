@@ -4,14 +4,17 @@
   "description": "The open-source CMO for AI agents",
   "bin": {
     "karis": "./bin/karis.js",
-    "karis-staging": "./bin/karis-staging.js"
+    "karis-staging": "./bin/karis-staging.js",
+    "karis-local": "./bin/karis-local.js"
   },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "build:local": "npm run build",
     "build:staging": "npm run build",
+    "local": "node ./bin/karis-local.js",
     "staging": "node ./bin/karis-staging.js",
     "typecheck": "tsc --noEmit",
     "dev": "tsc --watch"
