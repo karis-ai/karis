@@ -223,6 +223,7 @@ function buildPairingPage(extensionId: string, relay: RelayTokenResponse): strin
     extensionId,
     installUrl: extensionInstallUrl(extensionId),
     relayToken: relay.token,
+    activate: true,
     userId: relay.user_id,
     expiresIn: relay.expires_in,
     profile,
@@ -526,8 +527,8 @@ function buildPairingPage(extensionId: string, relay: RelayTokenResponse): strin
             type: 'SET_RELAY_TOKEN',
             payload: {
               token: state.relayToken,
+              activate: state.activate === true,
               profile: state.profile,
-              activate: true,
             },
           },
           response => {
@@ -647,7 +648,12 @@ export function registerBrowserCommand(program: Command): void {
       try {
         const client = await KarisClient.create();
         const existing = await client.getBrowserStatus();
-        if (!opts.force && existing.extension_connected && existing.can_execute) {
+        const alreadyConnectedHere =
+          existing.extension_connected &&
+          existing.can_execute &&
+          existing.connected_here &&
+          existing.local_extension_connected;
+        if (!opts.force && alreadyConnectedHere) {
           if (isTextOutput()) {
             console.log();
             console.log(success('Browser extension is already connected for this user.'));
@@ -656,6 +662,12 @@ export function registerBrowserCommand(program: Command): void {
           printStructured({ paired: true, already_connected: true, status: existing });
           return;
         }
+
+        const repairingLocalPairing =
+          !opts.force &&
+          existing.extension_connected &&
+          existing.can_execute &&
+          !alreadyConnectedHere;
 
         const relay = await client.getRelayToken();
         const page = buildPairingPage(extensionId, relay);
@@ -686,6 +698,14 @@ export function registerBrowserCommand(program: Command): void {
           console.log();
           console.log(success('Browser connect flow started'));
           console.log();
+          if (repairingLocalPairing) {
+            console.log(
+              chalk.dim(
+                'A browser relay is already connected for this user, but this local extension needs to be paired again.'
+              )
+            );
+            console.log();
+          }
           console.log(`${chalk.bold('User ID')}: ${relay.user_id}`);
           console.log(`${chalk.bold('Extension ID')}: ${extensionId}`);
           console.log(`${chalk.bold('Install Extension')}: ${extensionInstallUrl(extensionId)}`);
