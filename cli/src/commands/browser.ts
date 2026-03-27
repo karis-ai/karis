@@ -25,8 +25,32 @@ const DEFAULT_CONNECT_TIMEOUT_SECONDS = 45;
 const DEFAULT_SCROLL_AMOUNT = 600;
 const DEFAULT_BROWSER_EXTENSION_ID = 'mfmmdckeamdchhlafedfiiinmngloiok';
 
+interface BrowserConnectionProfile {
+  id: string;
+  label: string;
+  source: 'cli';
+}
+
 function extensionInstallUrl(extensionId: string): string {
   return `https://chromewebstore.google.com/detail/${extensionId}`;
+}
+
+function getCliConnectionProfile(): BrowserConnectionProfile {
+  const explicitId = process.env.KARIS_CONNECTION_PROFILE_ID?.trim();
+  const explicitLabel = process.env.KARIS_CONNECTION_PROFILE_LABEL?.trim();
+  if (explicitId && explicitLabel) {
+    return { id: explicitId, label: explicitLabel, source: 'cli' };
+  }
+
+  const envName = process.env.KARIS_ENV?.trim().toLowerCase();
+  if (envName === 'local') {
+    return { id: 'cli-local', label: 'CLI Local', source: 'cli' };
+  }
+  if (envName === 'staging') {
+    return { id: 'cli-staging', label: 'CLI Staging', source: 'cli' };
+  }
+
+  return { id: 'cli', label: 'CLI', source: 'cli' };
 }
 
 function timestampForFilename(date = new Date()): string {
@@ -194,18 +218,15 @@ function sleep(ms: number): Promise<void> {
 }
 
 function buildPairingPage(extensionId: string, relay: RelayTokenResponse): string {
+  const profile = getCliConnectionProfile();
   const payload = JSON.stringify({
     extensionId,
     installUrl: extensionInstallUrl(extensionId),
     relayToken: relay.token,
     activate: true,
-    profile: {
-      id: 'cli',
-      label: 'CLI',
-      source: 'cli',
-    },
     userId: relay.user_id,
     expiresIn: relay.expires_in,
+    profile,
   });
 
   return `<!doctype html>

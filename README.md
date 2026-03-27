@@ -25,6 +25,10 @@ npm install -g @karis-ai/cli
 karis setup
 karis chat
 
+# Local CLI (http://localhost:8000)
+karis-local setup
+karis-local chat
+
 # Staging CLI
 karis-staging setup
 karis-staging chat
@@ -85,11 +89,15 @@ Karis exposes three tiers of capability:
 # First-time setup
 karis setup
 
+# First-time setup against local API
+karis-local setup
+
 # First-time setup against staging
 karis-staging setup
 
 # Interactive agent chat (Layer 3)
 karis chat
+karis-local chat
 karis-staging chat
 
 # Direct tool calls (Layer 1)
@@ -315,6 +323,13 @@ The staging wrapper stores its own config in `~/.karis-staging/` so it does not 
 ```text
 ~/.karis-staging/
 └── config.json             # staging api-key and base-url
+```
+
+The local wrapper stores its own config in `~/.karis-local/` and defaults to `http://localhost:8000`:
+
+```text
+~/.karis-local/
+└── config.json             # local api-key and base-url
 ```
 
 ### Environment Variables
