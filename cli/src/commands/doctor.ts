@@ -191,6 +191,36 @@ async function checkBrowser(client: KarisClient): Promise<DoctorCheck> {
     };
   }
 
+  if (!browserCheck.status.extension_connected) {
+    return {
+      id: 'browser.relay',
+      status: 'warn',
+      message: 'Browser relay is reachable, but no browser extension is connected yet (optional)',
+      details: {
+        extension_connected: browserCheck.status.extension_connected,
+        can_execute: browserCheck.status.can_execute,
+        connected_here: browserCheck.status.connected_here,
+        auth_type: browserCheck.status.auth_type,
+        owner_instance: browserCheck.status.owner_instance,
+      },
+    };
+  }
+
+  if (browserCheck.status.extension_connected && !browserCheck.status.can_execute) {
+    return {
+      id: 'browser.relay',
+      status: 'warn',
+      message: 'Browser extension is connected, but this instance cannot execute browser actions yet (optional)',
+      details: {
+        extension_connected: browserCheck.status.extension_connected,
+        can_execute: browserCheck.status.can_execute,
+        connected_here: browserCheck.status.connected_here,
+        auth_type: browserCheck.status.auth_type,
+        owner_instance: browserCheck.status.owner_instance,
+      },
+    };
+  }
+
   return {
     id: 'browser.relay',
     status: 'warn',

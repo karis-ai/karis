@@ -21,7 +21,7 @@ import { loadConfig } from '../utils/config.js';
 import { printCommandResult, success } from '../utils/output.js';
 import { runCommand } from '../utils/run-command.js';
 
-const DEFAULT_CONNECT_TIMEOUT_SECONDS = 45;
+const DEFAULT_CONNECT_TIMEOUT_SECONDS = 300;
 const DEFAULT_SCROLL_AMOUNT = 600;
 const DEFAULT_BROWSER_EXTENSION_ID = 'mfmmdckeamdchhlafedfiiinmngloiok';
 
@@ -602,6 +602,158 @@ function printStructured(data: unknown): void {
   printCommandResult(data);
 }
 
+export interface BrowserConnectOptions {
+  extensionId?: string;
+  force?: boolean;
+  timeoutSeconds?: number;
+  open?: boolean;
+  textMode?: 'full' | 'silent';
+  emitStructured?: boolean;
+}
+
+export interface BrowserConnectResult {
+  paired: boolean;
+  already_connected?: boolean;
+  pairing_url?: string;
+  extension_id?: string;
+  forced?: boolean;
+  status: BrowserStatus;
+}
+
+export async function connectBrowserFlow(opts: BrowserConnectOptions = {}): Promise<BrowserConnectResult> {
+  const textMode = opts.textMode ?? 'full';
+  const emitStructured = opts.emitStructured ?? true;
+  const extensionId = await resolveConfiguredExtensionId(opts.extensionId);
+  if (!extensionId) {
+    throw createInvalidArgumentError(
+      'Browser extension ID not configured. Pass --extension-id or set `karis config set browser-extension-id <id>`.',
+    );
+  }
+
+  const timeoutSeconds = opts.timeoutSeconds ?? DEFAULT_CONNECT_TIMEOUT_SECONDS;
+  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+    throw createInvalidArgumentError('Timeout must be a positive number of seconds.');
+  }
+
+  let server: ReturnType<typeof createServer> | undefined;
+
+  try {
+    const client = await KarisClient.create();
+    const existing = await client.getBrowserStatus();
+    const alreadyConnectedHere =
+      existing.extension_connected &&
+      existing.can_execute &&
+      existing.connected_here &&
+      existing.local_extension_connected;
+
+    if (!opts.force && alreadyConnectedHere) {
+      if (isTextOutput() && textMode === 'full') {
+        console.log();
+        console.log(success('Browser extension is already connected for this user.'));
+        renderStatusText(existing);
+      }
+      if (emitStructured) {
+        printStructured({ paired: true, already_connected: true, status: existing });
+      }
+      return { paired: true, already_connected: true, status: existing };
+    }
+
+    const repairingLocalPairing =
+      !opts.force &&
+      existing.extension_connected &&
+      existing.can_execute &&
+      !alreadyConnectedHere;
+
+    const relay = await client.getRelayToken();
+    const page = buildPairingPage(extensionId, relay);
+
+    server = createServer((req, res) => {
+      if (req.url === '/' || req.url?.startsWith('/pair')) {
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+        res.end(page);
+        return;
+      }
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('Not found');
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      server!.once('error', reject);
+      server!.listen(0, '127.0.0.1', () => resolve());
+    });
+
+    const address = server.address() as AddressInfo | null;
+    if (!address) {
+      throw new Error('Failed to determine local pairing server address');
+    }
+
+    const pairingUrl = `http://localhost:${address.port}/pair`;
+
+    if (isTextOutput() && textMode === 'full') {
+      console.log();
+      console.log(success('Browser connect flow started'));
+      console.log();
+      if (repairingLocalPairing) {
+        console.log(
+          chalk.dim(
+            'A browser relay is already connected for this user, but this local extension needs to be paired again.'
+          )
+        );
+        console.log();
+      }
+      console.log(`${chalk.bold('User ID')}: ${relay.user_id}`);
+      console.log(`${chalk.bold('Extension ID')}: ${extensionId}`);
+      console.log(`${chalk.bold('Install Extension')}: ${extensionInstallUrl(extensionId)}`);
+      console.log(`${chalk.bold('Pairing URL')}: ${pairingUrl}`);
+      if (opts.force) {
+        console.log(`${chalk.bold('Mode')}: forced re-pair`);
+      }
+      console.log();
+      console.log(chalk.dim('If the extension is not installed yet, install it first, then open the pairing URL in Chrome.'));
+      console.log();
+    }
+
+    const opened = opts.open !== false && await openUrlInBrowser(pairingUrl);
+    if (isTextOutput() && textMode === 'full' && !opened) {
+      console.log(getPairingInstructions(pairingUrl, extensionId));
+      console.log();
+    }
+
+    const { status: connected, lastError } = await waitForConnection(client, timeoutSeconds * 1000);
+    if (!connected) {
+      const suffix = lastError ? `\nLast status error: ${lastError.message}` : '';
+      throw new Error(
+        `Extension did not connect before timeout.${suffix}\n${getPairingInstructions(pairingUrl, extensionId)}`,
+      );
+    }
+
+    if (isTextOutput() && textMode === 'full') {
+      console.log();
+      console.log(success('Browser extension connected'));
+      renderStatusText(connected);
+    }
+    if (emitStructured) {
+      printStructured({
+        paired: true,
+        pairing_url: pairingUrl,
+        extension_id: extensionId,
+        forced: opts.force === true,
+        status: connected,
+      });
+    }
+
+    return {
+      paired: true,
+      pairing_url: pairingUrl,
+      extension_id: extensionId,
+      forced: opts.force === true,
+      status: connected,
+    };
+  } finally {
+    server?.close();
+  }
+}
+
 export function registerBrowserCommand(program: Command): void {
   const browser = program.command('browser').description('Inspect and execute browser extension actions');
 
@@ -631,122 +783,12 @@ export function registerBrowserCommand(program: Command): void {
       timeout: string;
       open?: boolean;
     }) => {
-      const extensionId = await resolveConfiguredExtensionId(opts.extensionId);
-      if (!extensionId) {
-        throw createInvalidArgumentError(
-          'Browser extension ID not configured. Pass --extension-id or set `karis config set browser-extension-id <id>`.',
-        );
-      }
-
-      const timeoutSeconds = Number(opts.timeout);
-      if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
-        throw createInvalidArgumentError('Timeout must be a positive number of seconds.');
-      }
-
-      let server: ReturnType<typeof createServer> | undefined;
-
-      try {
-        const client = await KarisClient.create();
-        const existing = await client.getBrowserStatus();
-        const alreadyConnectedHere =
-          existing.extension_connected &&
-          existing.can_execute &&
-          existing.connected_here &&
-          existing.local_extension_connected;
-        if (!opts.force && alreadyConnectedHere) {
-          if (isTextOutput()) {
-            console.log();
-            console.log(success('Browser extension is already connected for this user.'));
-            renderStatusText(existing);
-          }
-          printStructured({ paired: true, already_connected: true, status: existing });
-          return;
-        }
-
-        const repairingLocalPairing =
-          !opts.force &&
-          existing.extension_connected &&
-          existing.can_execute &&
-          !alreadyConnectedHere;
-
-        const relay = await client.getRelayToken();
-        const page = buildPairingPage(extensionId, relay);
-
-        server = createServer((req, res) => {
-          if (req.url === '/' || req.url?.startsWith('/pair')) {
-            res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-            res.end(page);
-            return;
-          }
-          res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-          res.end('Not found');
-        });
-
-        await new Promise<void>((resolve, reject) => {
-          server!.once('error', reject);
-          server!.listen(0, '127.0.0.1', () => resolve());
-        });
-
-        const address = server.address() as AddressInfo | null;
-        if (!address) {
-          throw new Error('Failed to determine local pairing server address');
-        }
-
-        const pairingUrl = `http://localhost:${address.port}/pair`;
-
-        if (isTextOutput()) {
-          console.log();
-          console.log(success('Browser connect flow started'));
-          console.log();
-          if (repairingLocalPairing) {
-            console.log(
-              chalk.dim(
-                'A browser relay is already connected for this user, but this local extension needs to be paired again.'
-              )
-            );
-            console.log();
-          }
-          console.log(`${chalk.bold('User ID')}: ${relay.user_id}`);
-          console.log(`${chalk.bold('Extension ID')}: ${extensionId}`);
-          console.log(`${chalk.bold('Install Extension')}: ${extensionInstallUrl(extensionId)}`);
-          console.log(`${chalk.bold('Pairing URL')}: ${pairingUrl}`);
-          if (opts.force) {
-            console.log(`${chalk.bold('Mode')}: forced re-pair`);
-          }
-          console.log();
-          console.log(chalk.dim('If the extension is not installed yet, install it first, then open the pairing URL in Chrome.'));
-          console.log();
-        }
-
-        const opened = opts.open !== false && await openUrlInBrowser(pairingUrl);
-        if (isTextOutput() && !opened) {
-          console.log(getPairingInstructions(pairingUrl, extensionId));
-          console.log();
-        }
-
-        const { status: connected, lastError } = await waitForConnection(client, timeoutSeconds * 1000);
-        if (!connected) {
-          const suffix = lastError ? `\nLast status error: ${lastError.message}` : '';
-          throw new Error(
-            `Extension did not connect before timeout.${suffix}\n${getPairingInstructions(pairingUrl, extensionId)}`,
-          );
-        }
-
-        if (isTextOutput()) {
-          console.log();
-          console.log(success('Browser extension connected'));
-          renderStatusText(connected);
-        }
-        printStructured({
-          paired: true,
-          pairing_url: pairingUrl,
-          extension_id: extensionId,
-          forced: opts.force === true,
-          status: connected,
-        });
-      } finally {
-        server?.close();
-      }
+      await connectBrowserFlow({
+        extensionId: opts.extensionId,
+        force: opts.force,
+        timeoutSeconds: Number(opts.timeout),
+        open: opts.open,
+      });
     }));
 
   browser
